@@ -57,7 +57,7 @@ interface DemoStep {
 }
 
 interface DemoAction {
-  type: 'cursor' | 'click' | 'type' | 'highlight' | 'panel' | 'wait' | 'idea' | 'vote' | 'comment' | 'session' | 'close-panel' | 'emoji' | 'ai-prompt' | 'mermaid-chart' | 'sidebar-click' | 'search' | 'new-session' | 'canvas-action' | 'ai-insights' | 'ai-team-comment';
+  type: 'cursor' | 'click' | 'type' | 'highlight' | 'panel' | 'wait' | 'idea' | 'vote' | 'comment' | 'session' | 'close-panel' | 'emoji' | 'ai-prompt' | 'mermaid-chart' | 'sidebar-click' | 'search' | 'new-session' | 'canvas-action' | 'ai-insights' | 'ai-team-comment' | 'create-initial-diagram';
   target?: string;
   position?: { x: number; y: number };
   text?: string;
@@ -67,6 +67,7 @@ interface DemoAction {
   emoji?: string;
   content?: string;
   duration?: number;
+  sessionName?: string;
 }
 
 interface FloatingCursor {
@@ -103,6 +104,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
   const [openPanels, setOpenPanels] = useState<string[]>([]);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [aiInsightsData, setAiInsightsData] = useState<any>(null);
+  const [currentSessionName, setCurrentSessionName] = useState('AI Innovation Workshop 2024');
+  const [initialDiagram, setInitialDiagram] = useState<any[]>([]);
   
   const demoRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -116,11 +119,12 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
       duration: 12000, // Increased from 8000
       narration: 'Welcome to MindMeld Enterprise - the revolutionary AI-powered collaboration platform that transforms how teams ideate and make decisions.',
       actions: [
-        { type: 'highlight', target: 'navbar', delay: 1000, duration: 2000 }, // Increased delays
-        { type: 'ai-prompt', text: 'Create a workflow diagram for team collaboration', delay: 3000 },
-        { type: 'mermaid-chart', delay: 5000 },
-        { type: 'cursor', position: { x: 400, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 8000 },
-        { type: 'cursor', position: { x: 600, y: 400 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 9000 }
+        { type: 'create-initial-diagram', sessionName: 'AI Innovation Workshop 2024', delay: 500 },
+        { type: 'highlight', target: 'navbar', delay: 2000, duration: 2000 }, // Increased delays
+        { type: 'ai-prompt', text: 'Create a workflow diagram for team collaboration', delay: 5000 },
+        { type: 'mermaid-chart', delay: 7000 },
+        { type: 'cursor', position: { x: 400, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 9000 },
+        { type: 'cursor', position: { x: 600, y: 400 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 10000 }
       ]
     },
     {
@@ -141,14 +145,14 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     {
       id: 'new-session-creation',
       title: '🎯 New Session Creation & Canvas',
-      description: 'Creating a new session with blank canvas',
+      description: 'Creating a new session with beautiful initial diagram',
       duration: 9000, // Increased from 6000
-      narration: 'Now I will create a new collaboration session. Watch as we set up a fresh workspace for our team.',
+      narration: 'Now I will create a new collaboration session. Watch as we set up a fresh workspace with an intelligent initial diagram based on our session theme.',
       actions: [
         { type: 'new-session', delay: 1000 },
         { type: 'type', text: 'AI Innovation Workshop 2024', delay: 3000 },
         { type: 'click', target: 'create-session-btn', delay: 5500 },
-        { type: 'canvas-action', target: 'blank-canvas', delay: 7500 }
+        { type: 'create-initial-diagram', sessionName: 'AI Innovation Workshop 2024', delay: 7500 }
       ]
     },
     {
@@ -156,17 +160,17 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
       title: '🎨 Advanced Canvas Collaboration with Elbow Curves',
       description: 'Professional canvas tools with team interaction and elbow connectors',
       duration: 18000, // Increased from 12000
-      narration: 'Our professional canvas supports real-time collaboration with advanced drawing tools, shapes, and smart elbow curve connections.',
+      narration: 'Our professional canvas supports real-time collaboration with advanced drawing tools, shapes, and smart elbow curve connections, building upon our initial diagram.',
       actions: [
-        { type: 'canvas-action', target: 'create-rectangle', position: { x: 300, y: 200 }, delay: 1000 },
-        { type: 'canvas-action', target: 'add-text', text: 'User Research', position: { x: 300, y: 200 }, delay: 2500 },
-        { type: 'cursor', position: { x: 500, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 4000 },
-        { type: 'canvas-action', target: 'create-circle', position: { x: 500, y: 300 }, delay: 5000 },
-        { type: 'canvas-action', target: 'add-text', text: 'AI Analysis', position: { x: 500, y: 300 }, delay: 6000 },
+        { type: 'canvas-action', target: 'create-rectangle', position: { x: 300, y: 400 }, delay: 1000 },
+        { type: 'canvas-action', target: 'add-text', text: 'User Research', position: { x: 300, y: 400 }, delay: 2500 },
+        { type: 'cursor', position: { x: 500, y: 450 }, user: 'Sarah Chen', color: '#10B981', delay: 4000 },
+        { type: 'canvas-action', target: 'create-circle', position: { x: 500, y: 450 }, delay: 5000 },
+        { type: 'canvas-action', target: 'add-text', text: 'Validation', position: { x: 500, y: 450 }, delay: 6000 },
         { type: 'canvas-action', target: 'connect-elbow', delay: 8000 },
-        { type: 'cursor', position: { x: 700, y: 250 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 10000 },
-        { type: 'canvas-action', target: 'create-diamond', position: { x: 700, y: 250 }, delay: 11000 },
-        { type: 'canvas-action', target: 'add-text', text: 'Decision', position: { x: 700, y: 250 }, delay: 12000 },
+        { type: 'cursor', position: { x: 700, y: 400 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 10000 },
+        { type: 'canvas-action', target: 'create-diamond', position: { x: 700, y: 400 }, delay: 11000 },
+        { type: 'canvas-action', target: 'add-text', text: 'Implementation', position: { x: 700, y: 400 }, delay: 12000 },
         { type: 'canvas-action', target: 'connect-all-elbow', delay: 14000 }
       ]
     },
@@ -300,8 +304,151 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     });
   }, [currentStep, isPlaying]);
 
+  const createInitialDiagram = (sessionName: string) => {
+    // Create a beautiful initial diagram based on session name
+    const isAISession = sessionName.toLowerCase().includes('ai') || sessionName.toLowerCase().includes('innovation');
+    const isStrategySession = sessionName.toLowerCase().includes('strategy') || sessionName.toLowerCase().includes('planning');
+    const isWorkshopSession = sessionName.toLowerCase().includes('workshop') || sessionName.toLowerCase().includes('brainstorm');
+
+    let diagramElements = [];
+
+    if (isAISession) {
+      // AI Innovation themed diagram
+      diagramElements = [
+        {
+          id: 'center-ai',
+          type: 'circle',
+          position: { x: 400, y: 200 },
+          text: 'AI Innovation',
+          color: '#8B5CF6',
+          size: { width: 120, height: 120 }
+        },
+        {
+          id: 'research',
+          type: 'rectangle',
+          position: { x: 200, y: 120 },
+          text: 'Research',
+          color: '#3B82F6',
+          size: { width: 100, height: 60 }
+        },
+        {
+          id: 'development',
+          type: 'rectangle',
+          position: { x: 600, y: 120 },
+          text: 'Development',
+          color: '#10B981',
+          size: { width: 100, height: 60 }
+        },
+        {
+          id: 'testing',
+          type: 'rectangle',
+          position: { x: 200, y: 300 },
+          text: 'Testing',
+          color: '#F59E0B',
+          size: { width: 100, height: 60 }
+        },
+        {
+          id: 'deployment',
+          type: 'rectangle',
+          position: { x: 600, y: 300 },
+          text: 'Deployment',
+          color: '#EF4444',
+          size: { width: 100, height: 60 }
+        }
+      ];
+    } else if (isStrategySession) {
+      // Strategy themed diagram
+      diagramElements = [
+        {
+          id: 'vision',
+          type: 'star',
+          position: { x: 400, y: 150 },
+          text: 'Vision',
+          color: '#FFD700',
+          size: { width: 100, height: 100 }
+        },
+        {
+          id: 'goals',
+          type: 'rectangle',
+          position: { x: 300, y: 280 },
+          text: 'Goals',
+          color: '#3B82F6',
+          size: { width: 80, height: 50 }
+        },
+        {
+          id: 'actions',
+          type: 'rectangle',
+          position: { x: 520, y: 280 },
+          text: 'Actions',
+          color: '#10B981',
+          size: { width: 80, height: 50 }
+        }
+      ];
+    } else {
+      // Generic workshop diagram
+      diagramElements = [
+        {
+          id: 'ideate',
+          type: 'circle',
+          position: { x: 250, y: 200 },
+          text: 'Ideate',
+          color: '#8B5CF6',
+          size: { width: 80, height: 80 }
+        },
+        {
+          id: 'collaborate',
+          type: 'circle',
+          position: { x: 400, y: 200 },
+          text: 'Collaborate',
+          color: '#10B981',
+          size: { width: 80, height: 80 }
+        },
+        {
+          id: 'decide',
+          type: 'circle',
+          position: { x: 550, y: 200 },
+          text: 'Decide',
+          color: '#F59E0B',
+          size: { width: 80, height: 80 }
+        }
+      ];
+    }
+
+    // Add connecting lines with elbow curves
+    const connectors = [];
+    for (let i = 0; i < diagramElements.length - 1; i++) {
+      const start = diagramElements[i];
+      const end = diagramElements[i + 1];
+      if (start && end) {
+        connectors.push({
+          id: `connector-${i}`,
+          type: 'elbow-connector',
+          startPos: { 
+            x: start.position.x + start.size.width / 2, 
+            y: start.position.y + start.size.height / 2 
+          },
+          endPos: { 
+            x: end.position.x + end.size.width / 2, 
+            y: end.position.y + end.size.height / 2 
+          },
+          color: '#6B7280'
+        });
+      }
+    }
+
+    setInitialDiagram([...diagramElements, ...connectors]);
+    setCanvasShapes([...diagramElements, ...connectors]);
+  };
+
   const executeAction = (action: DemoAction) => {
     switch (action.type) {
+      case 'create-initial-diagram':
+        if (action.sessionName) {
+          setCurrentSessionName(action.sessionName);
+          createInitialDiagram(action.sessionName);
+        }
+        break;
+
       case 'cursor':
         if (action.position && action.user && action.color) {
           setCursors(prev => [
@@ -464,7 +611,8 @@ graph TD
             type: 'rectangle',
             position: action.position,
             text: '',
-            color: '#3B82F6'
+            color: '#3B82F6',
+            size: { width: 120, height: 80 }
           }]);
         } else if (action.target === 'create-circle' && action.position) {
           setCanvasShapes(prev => [...prev, {
@@ -472,7 +620,8 @@ graph TD
             type: 'circle',
             position: action.position,
             text: '',
-            color: '#10B981'
+            color: '#10B981',
+            size: { width: 100, height: 100 }
           }]);
         } else if (action.target === 'create-diamond' && action.position) {
           setCanvasShapes(prev => [...prev, {
@@ -480,7 +629,8 @@ graph TD
             type: 'diamond',
             position: action.position,
             text: '',
-            color: '#F59E0B'
+            color: '#F59E0B',
+            size: { width: 100, height: 100 }
           }]);
         } else if (action.target === 'add-text' && action.text && action.position) {
           setCanvasShapes(prev => prev.map(shape => 
@@ -566,6 +716,7 @@ graph TD
     setDemoComments([]);
     setEmojiReactions([]);
     setCanvasShapes([]);
+    setInitialDiagram([]);
     setOpenPanels([]);
     setHighlightedElement(null);
     setSidebarContent(null);
@@ -574,6 +725,7 @@ graph TD
     setShowAIPrompt(false);
     setShowMermaidChart(false);
     setAiInsightsData(null);
+    setCurrentSessionName('AI Innovation Workshop 2024');
     if (speechRef.current) {
       speechSynthesis.cancel();
     }
@@ -908,7 +1060,7 @@ graph TD
         ))}
       </AnimatePresence>
 
-      {/* Canvas Shapes with Elbow Connectors */}
+      {/* Canvas Shapes with Initial Diagram and Elbow Connectors */}
       <AnimatePresence>
         {canvasShapes.map((shape) => (
           <motion.div
@@ -939,12 +1091,17 @@ graph TD
               </svg>
             ) : (
               <div 
-                className={`w-20 h-12 flex items-center justify-center text-white text-xs font-medium shadow-lg ${
+                className={`flex items-center justify-center text-white text-xs font-medium shadow-lg ${
                   shape.type === 'rectangle' ? 'rounded-lg' :
                   shape.type === 'circle' ? 'rounded-full' :
+                  shape.type === 'star' ? 'rounded-lg' :
                   'transform rotate-45 rounded-lg'
                 }`}
-                style={{ backgroundColor: shape.color }}
+                style={{ 
+                  backgroundColor: shape.color,
+                  width: shape.size?.width || 80,
+                  height: shape.size?.height || 60
+                }}
               >
                 <span className={shape.type === 'diamond' ? 'transform -rotate-45' : ''}>
                   {shape.text}
@@ -1092,7 +1249,7 @@ graph TD
                 <label className="block text-xs font-medium text-gray-700 mb-1">Session Name</label>
                 <input
                   type="text"
-                  value="AI Innovation Workshop 2024"
+                  value={currentSessionName}
                   readOnly
                   className="w-full px-2 py-1 border border-gray-300 rounded text-xs bg-gray-50"
                 />
