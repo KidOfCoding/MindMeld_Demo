@@ -7,6 +7,7 @@ import { AIInsightPanel } from './components/ai/AIInsightPanel';
 import { CollaboratorPanel } from './components/collaboration/CollaboratorPanel';
 import { StatusBar } from './components/layout/StatusBar';
 import { WelcomeModal } from './components/modals/WelcomeModal';
+import { DemoModeWrapper } from './components/demo/DemoModeWrapper';
 import { Idea, User, CanvasElement } from './types';
 
 interface Session {
@@ -28,7 +29,7 @@ function App() {
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
   const [isCollaboratorPanelOpen, setIsCollaboratorPanelOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false); // Changed to false for demo
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [canvasHeight, setCanvasHeight] = useState(0);
@@ -98,6 +99,26 @@ function App() {
         lastModified: new Date(),
         participants: 8,
         status: 'active'
+      },
+      {
+        id: 'session-2',
+        name: 'Design Sprint Workshop',
+        ideas: [],
+        canvasElements: [],
+        createdAt: new Date(Date.now() - 172800000),
+        lastModified: new Date(Date.now() - 3600000),
+        participants: 12,
+        status: 'completed'
+      },
+      {
+        id: 'session-3',
+        name: 'User Journey Mapping',
+        ideas: [],
+        canvasElements: [],
+        createdAt: new Date(Date.now() - 259200000),
+        lastModified: new Date(Date.now() - 7200000),
+        participants: 6,
+        status: 'active'
       }
     ];
 
@@ -129,6 +150,20 @@ function App() {
     window.addEventListener('resize', updateCanvasSize);
     return () => window.removeEventListener('resize', updateCanvasSize);
   }, [isSidebarExpanded, sidebarWidth, isAIPanelOpen, isCollaboratorPanelOpen]);
+
+  // Demo event listeners
+  useEffect(() => {
+    const handleDemoOpenAIPanel = () => setIsAIPanelOpen(true);
+    const handleDemoOpenCommentsPanel = () => setIsCollaboratorPanelOpen(true);
+
+    document.addEventListener('demo-open-ai-panel', handleDemoOpenAIPanel);
+    document.addEventListener('demo-open-comments-panel', handleDemoOpenCommentsPanel);
+
+    return () => {
+      document.removeEventListener('demo-open-ai-panel', handleDemoOpenAIPanel);
+      document.removeEventListener('demo-open-comments-panel', handleDemoOpenCommentsPanel);
+    };
+  }, []);
 
   const handleExportCanvas = (format: 'png' | 'pdf') => {
     // Export functionality will be implemented in the canvas component
@@ -167,73 +202,75 @@ function App() {
   };
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
-      <Navbar 
-        onToggleAI={() => setIsAIPanelOpen(!isAIPanelOpen)}
-        onToggleCollaborators={() => setIsCollaboratorPanelOpen(!isCollaboratorPanelOpen)}
-        isAIPanelOpen={isAIPanelOpen}
-        isCollaboratorPanelOpen={isCollaboratorPanelOpen}
-        currentUser={currentUser}
-        onExportCanvas={handleExportCanvas}
-        sessions={sessions}
-        currentSessionId={currentSessionId}
-        onSessionSwitch={handleSessionSwitch}
-      />
-      
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar 
-          isExpanded={isSidebarExpanded}
-          onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
-          width={sidebarWidth}
+    <DemoModeWrapper>
+      <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+        <Navbar 
+          onToggleAI={() => setIsAIPanelOpen(!isAIPanelOpen)}
+          onToggleCollaborators={() => setIsCollaboratorPanelOpen(!isCollaboratorPanelOpen)}
+          isAIPanelOpen={isAIPanelOpen}
+          isCollaboratorPanelOpen={isCollaboratorPanelOpen}
+          currentUser={currentUser}
+          onExportCanvas={handleExportCanvas}
           sessions={sessions}
           currentSessionId={currentSessionId}
           onSessionSwitch={handleSessionSwitch}
-          onNewSession={handleNewSession}
         />
         
-        {/* Main Canvas Area */}
-        <div className="flex-1 relative">
-          <MiroCanvas
-            width={canvasWidth}
-            height={canvasHeight}
-            collaborators={collaborators}
-            currentUser={currentUser}
+        <div className="flex-1 flex overflow-hidden">
+          <Sidebar 
+            isExpanded={isSidebarExpanded}
+            onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
+            width={sidebarWidth}
+            sessions={sessions}
+            currentSessionId={currentSessionId}
+            onSessionSwitch={handleSessionSwitch}
+            onNewSession={handleNewSession}
           />
-        </div>
-        
-        <AnimatePresence>
-          {isAIPanelOpen && (
-            <AIInsightPanel 
-              ideas={ideas}
-              onClose={() => setIsAIPanelOpen(false)}
-            />
-          )}
-        </AnimatePresence>
-        
-        <AnimatePresence>
-          {isCollaboratorPanelOpen && (
-            <CollaboratorPanel 
+          
+          {/* Main Canvas Area */}
+          <div className="flex-1 relative">
+            <MiroCanvas
+              width={canvasWidth}
+              height={canvasHeight}
               collaborators={collaborators}
               currentUser={currentUser}
-              onClose={() => setIsCollaboratorPanelOpen(false)}
             />
+          </div>
+          
+          <AnimatePresence>
+            {isAIPanelOpen && (
+              <AIInsightPanel 
+                ideas={ideas}
+                onClose={() => setIsAIPanelOpen(false)}
+              />
+            )}
+          </AnimatePresence>
+          
+          <AnimatePresence>
+            {isCollaboratorPanelOpen && (
+              <CollaboratorPanel 
+                collaborators={collaborators}
+                currentUser={currentUser}
+                onClose={() => setIsCollaboratorPanelOpen(false)}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+        
+        <StatusBar 
+          ideas={ideas}
+          collaborators={collaborators}
+          selectedTool="select"
+          currentSession={getCurrentSession()}
+        />
+        
+        <AnimatePresence>
+          {showWelcome && (
+            <WelcomeModal onClose={() => setShowWelcome(false)} />
           )}
         </AnimatePresence>
       </div>
-      
-      <StatusBar 
-        ideas={ideas}
-        collaborators={collaborators}
-        selectedTool="select"
-        currentSession={getCurrentSession()}
-      />
-      
-      <AnimatePresence>
-        {showWelcome && (
-          <WelcomeModal onClose={() => setShowWelcome(false)} />
-        )}
-      </AnimatePresence>
-    </div>
+    </DemoModeWrapper>
   );
 }
 
