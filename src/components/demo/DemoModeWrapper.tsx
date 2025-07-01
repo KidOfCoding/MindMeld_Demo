@@ -17,11 +17,11 @@ export const DemoModeWrapper: React.FC<DemoModeWrapperProps> = ({ children }) =>
     speed: 1
   });
 
-  // Auto-show demo prompt after 3 seconds
+  // Auto-show demo prompt after 2 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowDemoPrompt(true);
-    }, 3000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -43,7 +43,7 @@ export const DemoModeWrapper: React.FC<DemoModeWrapperProps> = ({ children }) =>
         <AutomatedDemo onDemoComplete={endDemo} />
       )}
 
-      {/* Demo Prompt */}
+      {/* Demo Prompt - Responsive and properly sized */}
       <AnimatePresence>
         {showDemoPrompt && !isDemoMode && (
           <motion.div
@@ -53,61 +53,61 @@ export const DemoModeWrapper: React.FC<DemoModeWrapperProps> = ({ children }) =>
             className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
             style={{ zIndex: 10002 }}
           >
-            <div className="bg-white rounded-2xl p-8 max-w-2xl w-full relative overflow-hidden">
+            <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
               {/* Background Pattern */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 opacity-50"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 opacity-50 rounded-2xl"></div>
               
               <div className="relative z-10">
-                <div className="text-center mb-8">
-                  <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-500 via-purple-600 to-pink-500 rounded-full flex items-center justify-center relative">
-                    <Play className="w-10 h-10 text-white" />
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
-                      <Crown className="w-4 h-4 text-yellow-800" />
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 via-purple-600 to-pink-500 rounded-full flex items-center justify-center relative">
+                    <Play className="w-8 h-8 text-white" />
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                      <Crown className="w-3 h-3 text-yellow-800" />
                     </div>
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-3">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     🎯 Professional Demo Mode
                   </h2>
-                  <p className="text-lg text-gray-600 mb-2">
+                  <p className="text-gray-600 mb-2">
                     Perfect 15-minute automated presentation for judges
                   </p>
-                  <div className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full">
+                  <div className="inline-flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full">
                     <Sparkles className="w-4 h-4 text-purple-600" />
                     <span className="text-sm font-medium text-purple-800">Enterprise Edition</span>
                   </div>
                 </div>
 
                 {/* Demo Features Showcase */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                    <Users className="w-6 h-6 text-blue-600 mb-2" />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                  <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                    <Users className="w-5 h-5 text-blue-600 mb-2" />
                     <h4 className="font-semibold text-blue-900 text-sm">Live Collaboration</h4>
                     <p className="text-xs text-blue-700">Multiple floating cursors & real-time interactions</p>
                   </div>
-                  <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
-                    <Brain className="w-6 h-6 text-purple-600 mb-2" />
+                  <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                    <Brain className="w-5 h-5 text-purple-600 mb-2" />
                     <h4 className="font-semibold text-purple-900 text-sm">AI Insights</h4>
                     <p className="text-xs text-purple-700">Automated analysis & breakthrough recommendations</p>
                   </div>
-                  <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
-                    <Target className="w-6 h-6 text-green-600 mb-2" />
+                  <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                    <Target className="w-5 h-5 text-green-600 mb-2" />
                     <h4 className="font-semibold text-green-900 text-sm">Complete Workflow</h4>
                     <p className="text-xs text-green-700">Idea creation to final decision process</p>
                   </div>
-                  <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
-                    <Award className="w-6 h-6 text-orange-600 mb-2" />
+                  <div className="p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                    <Award className="w-5 h-5 text-orange-600 mb-2" />
                     <h4 className="font-semibold text-orange-900 text-sm">Professional UI</h4>
                     <p className="text-xs text-orange-700">Every feature demonstrated automatically</p>
                   </div>
                 </div>
 
                 {/* Demo Flow Timeline */}
-                <div className="mb-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                    <Clock className="w-5 h-5 mr-2 text-gray-600" />
+                <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Clock className="w-4 h-4 mr-2 text-gray-600" />
                     15-Minute Demo Timeline
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                     <div className="space-y-2">
                       <div className="font-medium text-blue-600">🚀 Setup & Navigation (5 min)</div>
                       <ul className="text-gray-600 space-y-1 text-xs">
@@ -137,13 +137,13 @@ export const DemoModeWrapper: React.FC<DemoModeWrapperProps> = ({ children }) =>
                 </div>
 
                 {/* Demo Settings */}
-                <div className="space-y-4 mb-8 p-6 bg-white/80 rounded-xl border border-gray-200">
+                <div className="space-y-3 mb-6 p-4 bg-white/80 rounded-lg border border-gray-200">
                   <h4 className="font-semibold text-gray-900 text-sm flex items-center">
                     <Settings className="w-4 h-4 mr-2" />
                     Demo Configuration
                   </h4>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-700">Auto-Start Demo</span>
                       <button
@@ -196,7 +196,7 @@ export const DemoModeWrapper: React.FC<DemoModeWrapperProps> = ({ children }) =>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex space-x-4">
+                <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
                   <button
                     onClick={() => setShowDemoPrompt(false)}
                     className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
@@ -211,7 +211,7 @@ export const DemoModeWrapper: React.FC<DemoModeWrapperProps> = ({ children }) =>
                   </button>
                 </div>
 
-                <div className="text-center mt-6">
+                <div className="text-center mt-4">
                   <p className="text-xs text-gray-500">
                     ⭐ Perfect for judge presentations, investor demos, and stakeholder meetings
                   </p>
