@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Eye, Settings, Volume2, VolumeX, Crown, Zap, Users, Brain, Target, Award, Sparkles } from 'lucide-react';
+import { Play, Eye, Settings, Volume2, VolumeX, Crown, Zap, Users, Brain, Target, Award, Sparkles, Clock } from 'lucide-react';
 import { AutomatedDemo } from './AutomatedDemo';
 
 interface DemoModeWrapperProps {
