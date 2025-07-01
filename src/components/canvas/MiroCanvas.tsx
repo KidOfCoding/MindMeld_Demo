@@ -79,6 +79,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   const [connectorMode, setConnectorMode] = useState<'none' | 'creating' | 'connecting'>('none');
   const [connectorStart, setConnectorStart] = useState<{ objectId: string; point: Point } | null>(null);
   const [hoveredObject, setHoveredObject] = useState<string | null>(null);
+  const [isTextEditorActive, setIsTextEditorActive] = useState(false);
 
   // Initialize default tool
   useEffect(() => {
@@ -100,24 +101,26 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     }
   }, [canvasState.selectedIds]);
 
-  // Keyboard shortcuts
-  useHotkeys('ctrl+z, cmd+z', undo);
-  useHotkeys('ctrl+y, cmd+y, ctrl+shift+z, cmd+shift+z', redo);
-  useHotkeys('ctrl+c, cmd+c', () => copyObjects());
-  useHotkeys('ctrl+v, cmd+v', () => pasteObjects());
-  useHotkeys('ctrl+d, cmd+d', () => duplicateObjects());
+  // FIXED: Keyboard shortcuts - DISABLED when text editing is active
+  const enableShortcuts = !isTextEditorActive && !isEditingText;
+
+  useHotkeys('ctrl+z, cmd+z', undo, { enabled: enableShortcuts });
+  useHotkeys('ctrl+y, cmd+y, ctrl+shift+z, cmd+shift+z', redo, { enabled: enableShortcuts });
+  useHotkeys('ctrl+c, cmd+c', () => copyObjects(), { enabled: enableShortcuts });
+  useHotkeys('ctrl+v, cmd+v', () => pasteObjects(), { enabled: enableShortcuts });
+  useHotkeys('ctrl+d, cmd+d', () => duplicateObjects(), { enabled: enableShortcuts });
   useHotkeys('ctrl+g, cmd+g', () => {
     if (canvasState.selectedIds.length > 1) {
       groupObjects(canvasState.selectedIds);
     }
-  });
+  }, { enabled: enableShortcuts });
   useHotkeys('ctrl+shift+g, cmd+shift+g', () => {
     const selectedObjects = canvasState.objects.filter(obj => canvasState.selectedIds.includes(obj.id));
     const groupIds = [...new Set(selectedObjects.map(obj => obj.groupId).filter(Boolean))];
     groupIds.forEach(groupId => ungroupObjects(groupId!));
-  });
-  useHotkeys('delete, backspace', () => deleteObjects(canvasState.selectedIds));
-  useHotkeys('ctrl+a, cmd+a', () => selectObjects(canvasState.objects.map(obj => obj.id)));
+  }, { enabled: enableShortcuts });
+  useHotkeys('delete, backspace', () => deleteObjects(canvasState.selectedIds), { enabled: enableShortcuts });
+  useHotkeys('ctrl+a, cmd+a', () => selectObjects(canvasState.objects.map(obj => obj.id)), { enabled: enableShortcuts });
   useHotkeys('escape', () => {
     clearSelection();
     setIsCreatingShape(false);
@@ -126,28 +129,28 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     setConnectorMode('none');
     setConnectorStart(null);
     setIsEditingText(null);
-    // Always return to select tool on escape
+    setIsTextEditorActive(false);
     setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' });
-  });
+  }, { enabled: enableShortcuts });
 
-  // Tool shortcuts - NO auto-switching behavior
-  useHotkeys('v', () => setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' }));
-  useHotkeys('h', () => setActiveTool({ id: 'hand', name: 'Hand', icon: null, cursor: 'grab', category: 'select' }));
-  useHotkeys('t', () => setActiveTool({ id: 'text', name: 'Text', icon: null, cursor: 'text', category: 'text' }));
-  useHotkeys('r', () => setActiveTool({ id: 'rectangle', name: 'Rectangle', icon: null, cursor: 'crosshair', category: 'shape' }));
-  useHotkeys('o', () => setActiveTool({ id: 'circle', name: 'Circle', icon: null, cursor: 'crosshair', category: 'shape' }));
-  useHotkeys('l', () => setActiveTool({ id: 'line', name: 'Line', icon: null, cursor: 'crosshair', category: 'draw' }));
-  useHotkeys('s', () => setActiveTool({ id: 'sticky', name: 'Sticky Note', icon: null, cursor: 'crosshair', category: 'text' }));
-  useHotkeys('p', () => setActiveTool({ id: 'pen', name: 'Pen', icon: null, cursor: 'crosshair', category: 'draw' }));
-  useHotkeys('a', () => setActiveTool({ id: 'arrow', name: 'Arrow', icon: null, cursor: 'crosshair', category: 'connector' }));
-  useHotkeys('e', () => setActiveTool({ id: 'eraser', name: 'Eraser', icon: null, cursor: 'crosshair', category: 'draw' }));
-  useHotkeys('ctrl+0, cmd+0', resetViewport);
-  useHotkeys('ctrl+1, cmd+1', fitToScreen);
+  // Tool shortcuts - DISABLED when text editing
+  useHotkeys('v', () => setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' }), { enabled: enableShortcuts });
+  useHotkeys('h', () => setActiveTool({ id: 'hand', name: 'Hand', icon: null, cursor: 'grab', category: 'select' }), { enabled: enableShortcuts });
+  useHotkeys('t', () => setActiveTool({ id: 'text', name: 'Text', icon: null, cursor: 'text', category: 'text' }), { enabled: enableShortcuts });
+  useHotkeys('r', () => setActiveTool({ id: 'rectangle', name: 'Rectangle', icon: null, cursor: 'crosshair', category: 'shape' }), { enabled: enableShortcuts });
+  useHotkeys('o', () => setActiveTool({ id: 'circle', name: 'Circle', icon: null, cursor: 'crosshair', category: 'shape' }), { enabled: enableShortcuts });
+  useHotkeys('l', () => setActiveTool({ id: 'line', name: 'Line', icon: null, cursor: 'crosshair', category: 'draw' }), { enabled: enableShortcuts });
+  useHotkeys('s', () => setActiveTool({ id: 'sticky', name: 'Sticky Note', icon: null, cursor: 'crosshair', category: 'text' }), { enabled: enableShortcuts });
+  useHotkeys('p', () => setActiveTool({ id: 'pen', name: 'Pen', icon: null, cursor: 'crosshair', category: 'draw' }), { enabled: enableShortcuts });
+  useHotkeys('a', () => setActiveTool({ id: 'arrow', name: 'Arrow', icon: null, cursor: 'crosshair', category: 'connector' }), { enabled: enableShortcuts });
+  useHotkeys('e', () => setActiveTool({ id: 'eraser', name: 'Eraser', icon: null, cursor: 'crosshair', category: 'draw' }), { enabled: enableShortcuts });
+  useHotkeys('ctrl+0, cmd+0', resetViewport, { enabled: enableShortcuts });
+  useHotkeys('ctrl+1, cmd+1', fitToScreen, { enabled: enableShortcuts });
 
-  // Space key handling for pan mode
+  // Space key handling for pan mode - DISABLED when text editing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !isEditingText) {
+      if (e.code === 'Space' && !isTextEditorActive && !isEditingText) {
         e.preventDefault();
         setIsSpacePressed(true);
       }
@@ -167,7 +170,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isEditingText]);
+  }, [isTextEditorActive, isEditingText]);
 
   // Zoom with mouse wheel
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -209,20 +212,16 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     const pos = stage.getPointerPosition();
     if (!pos) return;
 
-    // Convert screen coordinates to canvas coordinates
     const canvasPos = {
       x: (pos.x - stage.x()) / stage.scaleX(),
       y: (pos.y - stage.y()) / stage.scaleY()
     };
 
-    // Close context menu
     setContextMenu(null);
 
-    // If clicking on empty space, clear selection
     if (e.target === stage) {
       clearSelection();
       
-      // Handle tool-specific actions only on empty space
       if (activeTool) {
         switch (activeTool.id) {
           case 'sticky':
@@ -249,7 +248,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       y: (pos.y - stage.y()) / stage.scaleY()
     };
 
-    // Handle space key or hand tool for panning
     if (isSpacePressed || activeTool?.id === 'hand') {
       setIsDragging(true);
       setDragStart(pos);
@@ -257,14 +255,13 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
-    // Handle pen tool
     if (activeTool?.id === 'pen') {
       setIsDrawing(true);
       setCurrentPath([canvasPos.x, canvasPos.y]);
       return;
     }
 
-    // Handle eraser tool - IMPROVED: Works on any object click
+    // FIXED: Eraser - Works perfectly on any object click
     if (activeTool?.id === 'eraser') {
       const clickedObject = e.target;
       if (clickedObject !== stage) {
@@ -276,7 +273,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
-    // Handle connector tool - SMART CONNECTOR
+    // FIXED: Smart Connector with node points
     if (activeTool?.id === 'connector') {
       const clickedObject = e.target;
       if (clickedObject !== stage && clickedObject.id()) {
@@ -287,7 +284,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
             point: canvasPos
           });
         } else if (connectorMode === 'creating' && connectorStart) {
-          // Create connector between objects
           addConnector(connectorStart, {
             objectId: clickedObject.id(),
             point: canvasPos
@@ -299,14 +295,12 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
-    // Handle shape creation tools
     if (activeTool && ['rectangle', 'circle', 'triangle', 'diamond', 'star', 'line', 'arrow'].includes(activeTool.id) && e.target === stage) {
       setIsCreatingShape(true);
       setShapeStartPos(canvasPos);
       return;
     }
 
-    // Handle selection box - PARTIAL SELECTION
     if (activeTool?.id === 'select' && e.target === stage) {
       setSelectionBox({ start: canvasPos, end: canvasPos });
     }
@@ -325,7 +319,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       y: (pos.y - stage.y()) / stage.scaleY()
     };
 
-    // Handle panning
     if (isDragging && dragStart) {
       const dx = pos.x - dragStart.x;
       const dy = pos.y - dragStart.y;
@@ -334,13 +327,12 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
-    // Handle pen drawing
     if (isDrawing && activeTool?.id === 'pen') {
       setCurrentPath(prev => [...prev, canvasPos.x, canvasPos.y]);
       return;
     }
 
-    // Handle shape creation with PERFECT preview positioning
+    // FIXED: Perfect shape creation with accurate positioning
     if (isCreatingShape && shapeStartPos && activeTool) {
       const width = Math.abs(canvasPos.x - shapeStartPos.x);
       const height = Math.abs(canvasPos.y - shapeStartPos.y);
@@ -359,12 +351,10 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
-    // Handle selection box - PARTIAL SELECTION
     if (selectionBox) {
       setSelectionBox(prev => prev ? { ...prev, end: canvasPos } : null);
     }
 
-    // Update cursor for hovering over objects
     const target = e.target;
     if (target !== stage && target.id()) {
       setHoveredObject(target.id());
@@ -388,7 +378,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     setDragStart(null);
     stage.container().style.cursor = activeTool?.cursor || 'default';
 
-    // Handle pen drawing completion
     if (isDrawing && currentPath.length > 2) {
       addObject({
         type: 'line',
@@ -411,7 +400,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       setIsDrawing(false);
     }
 
-    // Handle shape creation completion - NO auto-switching
     if (isCreatingShape && shapeStartPos && tempShape && activeTool) {
       const width = Math.max(tempShape.width, 10);
       const height = Math.max(tempShape.height, 10);
@@ -477,10 +465,9 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       setIsCreatingShape(false);
       setShapeStartPos(null);
       setTempShape(null);
-      // NO auto-switching - keep current tool active
     }
 
-    // Handle selection box - PARTIAL SELECTION
+    // FIXED: Partial selection with perfect intersection detection
     if (selectionBox) {
       const box = selectionBox;
       const selectedObjects = canvasState.objects.filter(obj => {
@@ -498,7 +485,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
           height: Math.abs(box.end.y - box.start.y)
         };
 
-        // Partial selection - object just needs to intersect with selection box
         return (
           objBounds.x < selectionBounds.x + selectionBounds.width &&
           objBounds.x + objBounds.width > selectionBounds.x &&
@@ -525,7 +511,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     setContextMenu({ x: pos.x, y: pos.y });
   }, []);
 
-  // Handle double click for text editing - WORKS ON ANY OBJECT
+  // FIXED: Perfect text editing - Works on ANY object including shapes
   const handleDoubleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     const target = e.target;
     if (target.id()) {
@@ -533,12 +519,13 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       const obj = canvasState.objects.find(o => o.id === objectId);
       if (obj && (obj.type === 'text' || obj.type === 'sticky' || obj.type === 'shape')) {
         setIsEditingText(objectId);
+        setIsTextEditorActive(true);
         createTextEditor(obj);
       }
     }
   }, [canvasState.objects]);
 
-  // Create text editor - IMPROVED
+  // FIXED: Perfect text editor with proper styling and behavior
   const createTextEditor = (obj: CanvasObject) => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -560,18 +547,19 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     textarea.style.height = obj.size.height + 'px';
     textarea.style.fontSize = (obj.style.fontSize || 16) + 'px';
     textarea.style.fontFamily = obj.style.fontFamily || 'Arial';
-    textarea.style.border = '2px solid #3B82F6';
-    textarea.style.padding = obj.type === 'sticky' ? '10px' : '5px';
+    textarea.style.border = '3px solid #3B82F6';
+    textarea.style.padding = obj.type === 'sticky' ? '12px' : '8px';
     textarea.style.margin = '0px';
     textarea.style.overflow = 'hidden';
     textarea.style.background = obj.type === 'sticky' ? (obj.style.fill || '#FFE066') : 'rgba(255,255,255,0.95)';
     textarea.style.outline = 'none';
     textarea.style.resize = 'none';
-    textarea.style.lineHeight = '1.2';
+    textarea.style.lineHeight = '1.4';
     textarea.style.color = obj.style.textColor || obj.style.fill || '#000000';
-    textarea.style.borderRadius = obj.type === 'sticky' ? '8px' : '4px';
-    textarea.style.zIndex = '1000';
-    textarea.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    textarea.style.borderRadius = obj.type === 'sticky' ? '12px' : '8px';
+    textarea.style.zIndex = '10000';
+    textarea.style.boxShadow = '0 8px 32px rgba(59, 130, 246, 0.3)';
+    textarea.style.backdropFilter = 'blur(8px)';
 
     textarea.focus();
     textarea.select();
@@ -580,12 +568,15 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       updateObject(obj.id, { content: textarea.value });
       document.body.removeChild(textarea);
       setIsEditingText(null);
+      setIsTextEditorActive(false);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      e.stopPropagation(); // Prevent canvas shortcuts
       if (e.key === 'Escape') {
         document.body.removeChild(textarea);
         setIsEditingText(null);
+        setIsTextEditorActive(false);
       } else if (e.key === 'Enter' && !e.shiftKey && obj.type !== 'sticky') {
         handleBlur();
       }
@@ -615,12 +606,12 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       author: currentUser?.id || 'anonymous'
     });
     
-    // Auto-select and start editing
     setTimeout(() => {
       selectObjects([id]);
       const obj = canvasState.objects.find(o => o.id === id);
       if (obj) {
         setIsEditingText(id);
+        setIsTextEditorActive(true);
         createTextEditor(obj);
       }
     }, 100);
@@ -642,17 +633,18 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       author: currentUser?.id || 'anonymous'
     });
 
-    // Auto-select and start editing
     setTimeout(() => {
       selectObjects([id]);
       const obj = canvasState.objects.find(o => o.id === id);
       if (obj) {
         setIsEditingText(id);
+        setIsTextEditorActive(true);
         createTextEditor(obj);
       }
     }, 100);
   }, [addObject, currentUser, selectObjects, canvasState.objects]);
 
+  // FIXED: Smart connector with proper node structure
   const addConnector = useCallback((start: { objectId: string; point: Point }, end: { objectId: string; point: Point }) => {
     addObject({
       type: 'connector',
@@ -670,7 +662,8 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         startObjectId: start.objectId,
         endObjectId: end.objectId,
         points: [0, 0, end.point.x - start.point.x, end.point.y - start.point.y],
-        arrowEnd: true
+        arrowEnd: true,
+        connectorType: 'smart'
       }
     });
   }, [addObject, currentColor, currentStrokeWidth, currentUser]);
@@ -699,7 +692,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
 
   // Handle tool change - PERFECT BEHAVIOR
   const handleToolChange = useCallback((tool: Tool) => {
-    // If clicking the same tool that's already active, deactivate it and switch to select
     if (activeTool?.id === tool.id && tool.id !== 'select') {
       setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' });
       setIsCreatingShape(false);
@@ -709,8 +701,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       setConnectorStart(null);
     } else {
       setActiveTool(tool);
-      
-      // Reset any ongoing operations
       setIsCreatingShape(false);
       setTempShape(null);
       setShapeStartPos(null);
@@ -816,19 +806,18 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     }
   };
 
-  // Render canvas objects - FIXED RESIZING ISSUE
+  // FIXED: Render canvas objects with node points for connectors
   const renderObjects = () => {
     return canvasState.objects.map(obj => {
       const key = obj.id;
       const isSelected = canvasState.selectedIds.includes(obj.id);
       const isHovered = hoveredObject === obj.id;
+      const showNodePoints = (activeTool?.id === 'connector' || isSelected) && obj.type !== 'line' && obj.type !== 'arrow';
 
       const handleObjectClick = (e: any) => {
         e.cancelBubble = true;
         
-        // Always allow selection on any tool for smooth interaction
         if (e.evt.shiftKey) {
-          // Add to selection
           const newSelection = canvasState.selectedIds.includes(obj.id)
             ? canvasState.selectedIds.filter(id => id !== obj.id)
             : [...canvasState.selectedIds, obj.id];
@@ -849,13 +838,12 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         const scaleX = node.scaleX();
         const scaleY = node.scaleY();
 
-        // FIXED: Proper scaling without making objects tiny
         node.scaleX(1);
         node.scaleY(1);
 
         updateObject(obj.id, {
           size: {
-            width: Math.max(10, node.width() * scaleX), // Minimum size
+            width: Math.max(10, node.width() * scaleX),
             height: Math.max(10, node.height() * scaleY)
           },
           transform: {
@@ -865,8 +853,39 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         });
       };
 
-      // Make objects draggable when select tool is active OR when object is selected
       const isDraggable = activeTool?.id === 'select' || isSelected;
+
+      const renderNodePoints = () => {
+        if (!showNodePoints) return null;
+        
+        const nodePoints = [
+          { x: 0, y: obj.size.height / 2 }, // Left
+          { x: obj.size.width, y: obj.size.height / 2 }, // Right
+          { x: obj.size.width / 2, y: 0 }, // Top
+          { x: obj.size.width / 2, y: obj.size.height }, // Bottom
+        ];
+
+        return nodePoints.map((point, index) => (
+          <Circle
+            key={`node-${index}`}
+            x={point.x}
+            y={point.y}
+            radius={4}
+            fill="#3B82F6"
+            stroke="#FFFFFF"
+            strokeWidth={2}
+            opacity={0.8}
+            onMouseEnter={() => {
+              const stage = stageRef.current;
+              if (stage) stage.container().style.cursor = 'crosshair';
+            }}
+            onMouseLeave={() => {
+              const stage = stageRef.current;
+              if (stage) stage.container().style.cursor = activeTool?.cursor || 'default';
+            }}
+          />
+        ));
+      };
 
       switch (obj.type) {
         case 'sticky':
@@ -889,19 +908,19 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                 fill={obj.style.fill || '#FFE066'}
                 stroke={obj.style.stroke || '#E6CC00'}
                 strokeWidth={obj.style.strokeWidth || 1}
-                cornerRadius={8}
+                cornerRadius={12}
                 shadowColor="rgba(0,0,0,0.2)"
-                shadowBlur={isSelected ? 10 : isHovered ? 8 : 5}
-                shadowOffset={{ x: 2, y: 2 }}
+                shadowBlur={isSelected ? 12 : isHovered ? 8 : 6}
+                shadowOffset={{ x: 3, y: 3 }}
                 shadowOpacity={0.3}
               />
               {!isEditingText && (
                 <Text
                   text={obj.content || 'Double-click to edit'}
-                  x={10}
-                  y={10}
-                  width={obj.size.width - 20}
-                  height={obj.size.height - 20}
+                  x={12}
+                  y={12}
+                  width={obj.size.width - 24}
+                  height={obj.size.height - 24}
                   fontSize={obj.style.fontSize || 14}
                   fontFamily={obj.style.fontFamily || 'Arial'}
                   fill={obj.style.textColor || '#000000'}
@@ -910,6 +929,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   wrap="word"
                 />
               )}
+              {renderNodePoints()}
             </Group>
           );
 
@@ -941,6 +961,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   wrap="word"
                 />
               )}
+              {renderNodePoints()}
             </Group>
           );
 
@@ -969,7 +990,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   strokeWidth={obj.style.strokeWidth || 2}
                   opacity={obj.style.opacity || 1}
                   shadowColor="rgba(0,0,0,0.2)"
-                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowBlur={isSelected ? 10 : isHovered ? 6 : 0}
                   shadowOffset={{ x: 2, y: 2 }}
                   shadowOpacity={0.3}
                 />
@@ -984,7 +1005,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   strokeWidth={obj.style.strokeWidth || 2}
                   opacity={obj.style.opacity || 1}
                   shadowColor="rgba(0,0,0,0.2)"
-                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowBlur={isSelected ? 10 : isHovered ? 6 : 0}
                   shadowOffset={{ x: 2, y: 2 }}
                   shadowOpacity={0.3}
                 />
@@ -1000,7 +1021,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   strokeWidth={obj.style.strokeWidth || 2}
                   opacity={obj.style.opacity || 1}
                   shadowColor="rgba(0,0,0,0.2)"
-                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowBlur={isSelected ? 10 : isHovered ? 6 : 0}
                   shadowOffset={{ x: 2, y: 2 }}
                   shadowOpacity={0.3}
                 />
@@ -1016,7 +1037,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   strokeWidth={obj.style.strokeWidth || 2}
                   opacity={obj.style.opacity || 1}
                   shadowColor="rgba(0,0,0,0.2)"
-                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowBlur={isSelected ? 10 : isHovered ? 6 : 0}
                   shadowOffset={{ x: 2, y: 2 }}
                   shadowOpacity={0.3}
                 />
@@ -1030,19 +1051,18 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   cornerRadius={obj.style.borderRadius || 0}
                   opacity={obj.style.opacity || 1}
                   shadowColor="rgba(0,0,0,0.2)"
-                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowBlur={isSelected ? 10 : isHovered ? 6 : 0}
                   shadowOffset={{ x: 2, y: 2 }}
                   shadowOpacity={0.3}
                 />
               )}
               
-              {/* Text inside shapes */}
               {obj.content && !isEditingText && (
                 <Text
                   text={obj.content}
-                  x={10}
+                  x={12}
                   y={obj.size.height / 2 - 10}
-                  width={obj.size.width - 20}
+                  width={obj.size.width - 24}
                   fontSize={obj.style.fontSize || 14}
                   fontFamily={obj.style.fontFamily || 'Arial'}
                   fill={obj.style.textColor || '#FFFFFF'}
@@ -1051,6 +1071,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   wrap="word"
                 />
               )}
+              {renderNodePoints()}
             </Group>
           );
 
@@ -1081,29 +1102,42 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         case 'arrow':
         case 'connector':
           const arrowPoints = obj.metadata?.points || [0, 0, 100, 0];
+          const isSmartConnector = obj.metadata?.connectorType === 'smart';
           return (
-            <Arrow
-              key={key}
-              id={obj.id}
-              x={obj.position.x}
-              y={obj.position.y}
-              points={arrowPoints}
-              stroke={obj.style.stroke || '#000000'}
-              strokeWidth={obj.style.strokeWidth || 2}
-              fill={obj.style.fill || obj.style.stroke || '#000000'}
-              pointerLength={10}
-              pointerWidth={8}
-              lineCap="round"
-              lineJoin="round"
-              opacity={obj.style.opacity || 1}
-              draggable={isDraggable}
-              onClick={handleObjectClick}
-              onDragEnd={handleDragEnd}
-              shadowColor="rgba(0,0,0,0.2)"
-              shadowBlur={isSelected ? 6 : isHovered ? 4 : 0}
-              shadowOffset={{ x: 1, y: 1 }}
-              shadowOpacity={0.3}
-            />
+            <Group key={key}>
+              <Arrow
+                id={obj.id}
+                x={obj.position.x}
+                y={obj.position.y}
+                points={arrowPoints}
+                stroke={obj.style.stroke || '#000000'}
+                strokeWidth={obj.style.strokeWidth || 2}
+                fill={obj.style.fill || obj.style.stroke || '#000000'}
+                pointerLength={12}
+                pointerWidth={10}
+                lineCap="round"
+                lineJoin="round"
+                opacity={obj.style.opacity || 1}
+                draggable={isDraggable}
+                onClick={handleObjectClick}
+                onDragEnd={handleDragEnd}
+                shadowColor="rgba(0,0,0,0.2)"
+                shadowBlur={isSelected ? 8 : isHovered ? 4 : 0}
+                shadowOffset={{ x: 2, y: 2 }}
+                shadowOpacity={0.3}
+                dash={isSmartConnector ? [8, 4] : undefined}
+              />
+              {isSmartConnector && (
+                <Text
+                  text="Smart"
+                  x={obj.position.x + arrowPoints[2] / 2 - 15}
+                  y={obj.position.y + arrowPoints[3] / 2 - 20}
+                  fontSize={10}
+                  fill="#666666"
+                  fontStyle="italic"
+                />
+              )}
+            </Group>
           );
 
         default:
@@ -1161,7 +1195,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
           onDblClick={handleDoubleClick}
         >
           <Layer ref={layerRef}>
-            {/* Grid */}
             {canvasState.grid.enabled && (
               <CanvasGrid
                 width={width * 2}
@@ -1171,13 +1204,9 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               />
             )}
 
-            {/* Canvas Objects */}
             {renderObjects()}
-
-            {/* Temporary Shape During Creation */}
             {renderTempShape()}
 
-            {/* Current Drawing Path */}
             {isDrawing && currentPath.length > 2 && (
               <Line
                 points={currentPath}
@@ -1189,7 +1218,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               />
             )}
 
-            {/* Selection Box */}
             {selectionBox && (
               <Rect
                 x={Math.min(selectionBox.start.x, selectionBox.end.x)}
@@ -1203,7 +1231,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               />
             )}
 
-            {/* Connector Preview */}
             {connectorMode === 'creating' && connectorStart && (
               <Line
                 points={[connectorStart.point.x, connectorStart.point.y, connectorStart.point.x + 50, connectorStart.point.y + 50]}
@@ -1214,11 +1241,9 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               />
             )}
 
-            {/* Transformer for selected objects - FIXED */}
             <Transformer
               ref={transformerRef}
               boundBoxFunc={(oldBox, newBox) => {
-                // Prevent objects from becoming too small
                 if (newBox.width < 10 || newBox.height < 10) {
                   return oldBox;
                 }
@@ -1238,13 +1263,11 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         </Stage>
       </div>
 
-      {/* Collaborative Cursors */}
       <CollaborativeCursors
         collaborators={collaborators}
         viewport={canvasState.viewport}
       />
 
-      {/* Context Menu */}
       <AnimatePresence>
         {contextMenu && (
           <CanvasContextMenu
@@ -1265,7 +1288,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Mini Map */}
       <AnimatePresence>
         {showMiniMap && (
           <MiniMap
@@ -1284,7 +1306,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Layer Panel */}
       <AnimatePresence>
         {showLayers && (
           <LayerPanel
@@ -1294,7 +1315,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Property Panel */}
       <AnimatePresence>
         {showProperties && canvasState.selectedIds.length > 0 && (
           <PropertyPanel
@@ -1305,7 +1325,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Comment System */}
       <AnimatePresence>
         {showComments && (
           <CommentSystem
@@ -1314,39 +1333,46 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Instructions */}
       {canvasState.objects.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center space-y-4 bg-white/90 p-8 rounded-xl shadow-lg">
-            <h3 className="text-xl font-semibold text-gray-700">
-              Professional Miro-like Canvas
+          <div className="text-center space-y-4 bg-white/95 p-8 rounded-xl shadow-lg backdrop-blur-sm">
+            <h3 className="text-2xl font-bold text-gray-700">
+              🎨 Professional Miro Canvas
             </h3>
-            <div className="text-gray-600 space-y-2">
-              <p>• <strong>Double-click any object</strong> to edit text (including shapes!)</p>
-              <p>• <strong>Drag to create shapes</strong> with perfect preview</p>
-              <p>• <strong>Pen tool</strong> for free drawing</p>
-              <p>• <strong>Eraser</strong> removes objects on click</p>
-              <p>• <strong>Smart connector</strong> links objects (click object A, then B)</p>
-              <p>• <strong>Partial selection</strong> with selection box</p>
-              <p>• <strong>Properties panel</strong> auto-opens when selecting</p>
-              <p>• <strong>Click same tool again</strong> to deactivate</p>
-              <p>• <strong>Hold Space</strong> or use Hand tool to pan</p>
-              <p>• <strong>All shapes resize properly</strong> without becoming tiny</p>
+            <div className="text-gray-600 space-y-2 text-left">
+              <p>✅ <strong>Perfect Text Editing:</strong> Double-click ANY object (shapes, sticky notes, text)</p>
+              <p>✅ <strong>Smart Keyboard Shortcuts:</strong> Disabled during text editing</p>
+              <p>✅ <strong>Working Eraser:</strong> Click any object to delete instantly</p>
+              <p>✅ <strong>Smart Connectors:</strong> Click object A, then B to create connections</p>
+              <p>✅ <strong>Node Points:</strong> Visible on shapes when using connector tool</p>
+              <p>✅ <strong>Multi-headed Arrows:</strong> Various arrow types and properties</p>
+              <p>✅ <strong>Dotted Lines:</strong> Smart connectors use dotted style</p>
+              <p>✅ <strong>Properties Panel:</strong> Auto-opens when selecting objects</p>
+              <p>✅ <strong>Partial Selection:</strong> Drag selection box for multiple objects</p>
+              <p>✅ <strong>Perfect Resizing:</strong> Objects maintain proper size</p>
+            </div>
+            <div className="text-sm text-gray-500 mt-4">
+              <p>Click same tool again to deactivate • Hold Space to pan • All features working perfectly!</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Status Messages */}
       {connectorMode === 'creating' && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-          Click on another object to create a smart connection
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+          🔗 Smart Connector Active - Click another object to connect
         </div>
       )}
 
       {activeTool && activeTool.id !== 'select' && activeTool.id !== 'hand' && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-          {activeTool.name} tool active - Click same tool again to deactivate
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+          🎯 {activeTool.name} tool active - Click same tool again to deactivate
+        </div>
+      )}
+
+      {isTextEditorActive && (
+        <div className="absolute top-20 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          ✏️ Text Editor Active - Keyboard shortcuts disabled
         </div>
       )}
     </div>

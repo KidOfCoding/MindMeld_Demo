@@ -40,7 +40,11 @@ import {
   Star,
   GitBranch,
   ChevronDown,
-  Trash2
+  Trash2,
+  ArrowUpRight,
+  ArrowDownLeft,
+  CornerUpRight,
+  Zap
 } from 'lucide-react';
 import { Tool } from '../../types/canvas';
 
@@ -92,6 +96,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showShapeMenu, setShowShapeMenu] = useState(false);
   const [showConnectorMenu, setShowConnectorMenu] = useState(false);
+  const [showArrowMenu, setShowArrowMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const tools: Tool[] = [
@@ -101,7 +106,6 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     { id: 'text', name: 'Text', icon: Type, cursor: 'text', category: 'text' },
     { id: 'pen', name: 'Pen', icon: Pen, cursor: 'crosshair', category: 'draw' },
     { id: 'line', name: 'Line', icon: Minus, cursor: 'crosshair', category: 'draw' },
-    { id: 'arrow', name: 'Arrow', icon: ArrowRight, cursor: 'crosshair', category: 'connector' },
     { id: 'eraser', name: 'Eraser', icon: Eraser, cursor: 'crosshair', category: 'draw' }
   ];
 
@@ -113,17 +117,26 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     { id: 'star', name: 'Star', icon: Star }
   ];
 
+  const arrowTypes = [
+    { id: 'single', name: 'Single Arrow', icon: ArrowRight, description: 'Standard single-headed arrow' },
+    { id: 'double', name: 'Double Arrow', icon: ArrowUpRight, description: 'Double-headed arrow' },
+    { id: 'curved', name: 'Curved Arrow', icon: CornerUpRight, description: 'Curved connection arrow' },
+    { id: 'dotted', name: 'Dotted Arrow', icon: ArrowDownLeft, description: 'Dotted line arrow' }
+  ];
+
   const connectors = [
-    { id: 'straight', name: 'Straight Line', icon: Minus },
-    { id: 'curved', name: 'Curved Line', icon: GitBranch },
-    { id: 'arrow', name: 'Arrow', icon: ArrowRight }
+    { id: 'smart', name: 'Smart Connector', icon: GitBranch, description: 'Intelligent object connection' },
+    { id: 'straight', name: 'Straight Line', icon: Minus, description: 'Direct line connection' },
+    { id: 'curved', name: 'Curved Line', icon: CornerUpRight, description: 'Curved connection line' },
+    { id: 'elbow', name: 'Elbow Connector', icon: Zap, description: 'Right-angle connection' }
   ];
 
   const colors = [
     '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00',
     '#FF00FF', '#00FFFF', '#FFA500', '#800080', '#FFC0CB', '#A52A2A',
     '#808080', '#C0C0C0', '#800000', '#808000', '#008000', '#000080',
-    '#008080', '#4B0082', '#FF1493', '#00CED1', '#FFD700', '#DC143C'
+    '#008080', '#4B0082', '#FF1493', '#00CED1', '#FFD700', '#DC143C',
+    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'
   ];
 
   const strokeWidths = [1, 2, 3, 4, 5, 8, 10, 12, 16, 20];
@@ -132,6 +145,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     onToolChange(tool);
     setShowShapeMenu(false);
     setShowConnectorMenu(false);
+    setShowArrowMenu(false);
     setShowMoreMenu(false);
   };
 
@@ -147,6 +161,28 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       category: 'shape'
     });
     setShowShapeMenu(false);
+  };
+
+  const handleArrowSelect = (arrowType: string) => {
+    handleToolSelect({
+      id: 'arrow',
+      name: `${arrowTypes.find(a => a.id === arrowType)?.name || 'Arrow'}`,
+      icon: arrowTypes.find(a => a.id === arrowType)?.icon || ArrowRight,
+      cursor: 'crosshair',
+      category: 'connector'
+    });
+    setShowArrowMenu(false);
+  };
+
+  const handleConnectorSelect = (connectorType: string) => {
+    handleToolSelect({
+      id: 'connector',
+      name: connectors.find(c => c.id === connectorType)?.name || 'Smart Connector',
+      icon: connectors.find(c => c.id === connectorType)?.icon || GitBranch,
+      cursor: 'crosshair',
+      category: 'connector'
+    });
+    setShowConnectorMenu(false);
   };
 
   const getCurrentShapeIcon = () => {
@@ -175,6 +211,32 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       return 'bg-green-100 text-green-600 ring-2 ring-green-300 shadow-md';
     } else if (isShapeActive) {
       return 'bg-blue-100 text-blue-600 shadow-sm';
+    } else {
+      return 'text-gray-600 hover:bg-gray-100 hover:text-gray-800';
+    }
+  };
+
+  const getConnectorButtonClass = () => {
+    const isConnectorActive = activeTool?.id === 'connector';
+    const isActiveAndWorking = isConnectorActive && isToolActive;
+    
+    if (isActiveAndWorking) {
+      return 'bg-green-100 text-green-600 ring-2 ring-green-300 shadow-md';
+    } else if (isConnectorActive) {
+      return 'bg-purple-100 text-purple-600 shadow-sm';
+    } else {
+      return 'text-gray-600 hover:bg-gray-100 hover:text-gray-800';
+    }
+  };
+
+  const getArrowButtonClass = () => {
+    const isArrowActive = activeTool?.id === 'arrow';
+    const isActiveAndWorking = isArrowActive && isToolActive;
+    
+    if (isActiveAndWorking) {
+      return 'bg-green-100 text-green-600 ring-2 ring-green-300 shadow-md';
+    } else if (isArrowActive) {
+      return 'bg-orange-100 text-orange-600 shadow-sm';
     } else {
       return 'text-gray-600 hover:bg-gray-100 hover:text-gray-800';
     }
@@ -242,7 +304,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 grid grid-cols-3 gap-2 z-50 min-w-[200px]"
+                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 grid grid-cols-3 gap-2 z-50 min-w-[240px]"
                 >
                   {shapes.map((shape) => {
                     const Icon = shape.icon;
@@ -269,48 +331,116 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* Line and Arrow Tools */}
+          {/* Line Tool */}
           <div className="flex items-center space-x-1 pr-2 border-r border-gray-200">
-            {tools.slice(6, 8).map((tool) => {
-              const Icon = tool.icon;
-              return (
-                <motion.button
-                  key={tool.id}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleToolSelect(tool)}
-                  className={`p-2 rounded-lg transition-all duration-200 ${getToolButtonClass(tool)}`}
-                  title={`${tool.name} (${tool.id.charAt(0).toUpperCase()})`}
-                >
-                  <Icon className="w-5 h-5" />
-                </motion.button>
-              );
-            })}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleToolSelect(tools[5])}
+              className={`p-2 rounded-lg transition-all duration-200 ${getToolButtonClass(tools[5])}`}
+              title="Line (L)"
+            >
+              <Minus className="w-5 h-5" />
+            </motion.button>
           </div>
 
-          {/* Connector Tool */}
+          {/* Arrow Tools */}
           <div className="relative">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => handleToolSelect({
-                id: 'connector',
-                name: 'Smart Connector',
-                icon: GitBranch,
-                cursor: 'crosshair',
-                category: 'connector'
-              })}
-              className={`p-2 rounded-lg transition-all duration-200 ${
-                activeTool?.id === 'connector'
-                  ? isToolActive
-                    ? 'bg-green-100 text-green-600 ring-2 ring-green-300 shadow-md'
-                    : 'bg-purple-100 text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-              }`}
-              title="Smart Connector - Click object A, then object B"
+              onClick={() => setShowArrowMenu(!showArrowMenu)}
+              className={`flex items-center space-x-1 p-2 rounded-lg transition-all duration-200 ${getArrowButtonClass()}`}
+              title="Arrow Types"
+            >
+              <ArrowRight className="w-5 h-5" />
+              <ChevronDown className="w-3 h-3" />
+            </motion.button>
+
+            <AnimatePresence>
+              {showArrowMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50 min-w-[280px]"
+                >
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Arrow Types</h4>
+                  <div className="space-y-2">
+                    {arrowTypes.map((arrow) => {
+                      const Icon = arrow.icon;
+                      return (
+                        <motion.button
+                          key={arrow.id}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleArrowSelect(arrow.id)}
+                          className="w-full flex items-center space-x-3 p-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                        >
+                          <Icon className="w-5 h-5" />
+                          <div className="text-left">
+                            <div className="text-sm font-medium">{arrow.name}</div>
+                            <div className="text-xs text-gray-500">{arrow.description}</div>
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Smart Connector Tools */}
+          <div className="relative">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowConnectorMenu(!showConnectorMenu)}
+              className={`flex items-center space-x-1 p-2 rounded-lg transition-all duration-200 ${getConnectorButtonClass()}`}
+              title="Smart Connectors"
             >
               <GitBranch className="w-5 h-5" />
+              <ChevronDown className="w-3 h-3" />
             </motion.button>
+
+            <AnimatePresence>
+              {showConnectorMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50 min-w-[300px]"
+                >
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Smart Connectors</h4>
+                  <div className="space-y-2">
+                    {connectors.map((connector) => {
+                      const Icon = connector.icon;
+                      return (
+                        <motion.button
+                          key={connector.id}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleConnectorSelect(connector.id)}
+                          className="w-full flex items-center space-x-3 p-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                        >
+                          <Icon className="w-5 h-5" />
+                          <div className="text-left">
+                            <div className="text-sm font-medium">{connector.name}</div>
+                            <div className="text-xs text-gray-500">{connector.description}</div>
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <p className="text-xs text-gray-500">
+                      💡 Click object A, then object B to create smart connections with node points
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Eraser Tool */}
@@ -318,8 +448,8 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => handleToolSelect(tools[7])}
-              className={`p-2 rounded-lg transition-all duration-200 ${getToolButtonClass(tools[7])}`}
+              onClick={() => handleToolSelect(tools[6])}
+              className={`p-2 rounded-lg transition-all duration-200 ${getToolButtonClass(tools[6])}`}
               title="Eraser - Click any object to delete (E)"
             >
               <Eraser className="w-5 h-5" />
@@ -350,9 +480,9 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                   exit={{ opacity: 0, y: 10 }}
                   className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50"
                 >
-                  <div className="w-64">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Colors</h4>
-                    <div className="grid grid-cols-8 gap-2 mb-4">
+                  <div className="w-72">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Colors & Properties</h4>
+                    <div className="grid grid-cols-10 gap-2 mb-4">
                       {colors.map((color) => (
                         <motion.button
                           key={color}
@@ -393,6 +523,27 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                             />
                           </button>
                         ))}
+                      </div>
+                    </div>
+
+                    {/* Line Styles */}
+                    <div className="border-t pt-3 mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Line Styles
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button className="p-2 border border-gray-300 rounded hover:border-gray-400">
+                          <div className="w-full h-1 bg-gray-800"></div>
+                          <span className="text-xs mt-1">Solid</span>
+                        </button>
+                        <button className="p-2 border border-gray-300 rounded hover:border-gray-400">
+                          <div className="w-full h-1 bg-gray-800" style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 2px, #1f2937 2px, #1f2937 4px)' }}></div>
+                          <span className="text-xs mt-1">Dashed</span>
+                        </button>
+                        <button className="p-2 border border-gray-300 rounded hover:border-gray-400">
+                          <div className="w-full h-1 bg-gray-800" style={{ backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 1px, #1f2937 1px, #1f2937 2px)' }}></div>
+                          <span className="text-xs mt-1">Dotted</span>
+                        </button>
                       </div>
                     </div>
                   </div>
