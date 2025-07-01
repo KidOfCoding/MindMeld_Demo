@@ -57,7 +57,7 @@ interface DemoStep {
 }
 
 interface DemoAction {
-  type: 'cursor' | 'click' | 'type' | 'highlight' | 'panel' | 'wait' | 'idea' | 'vote' | 'comment' | 'session' | 'close-panel' | 'emoji' | 'ai-prompt' | 'mermaid-chart' | 'sidebar-click' | 'search' | 'new-session' | 'canvas-action' | 'ai-insights' | 'ai-team-comment' | 'close-popup' | 'clear-canvas' | 'create-initial-diagram';
+  type: 'cursor' | 'click' | 'type' | 'highlight' | 'panel' | 'wait' | 'idea' | 'vote' | 'comment' | 'session' | 'close-panel' | 'emoji' | 'ai-prompt' | 'mermaid-chart' | 'sidebar-click' | 'search' | 'new-session' | 'canvas-action' | 'ai-insights' | 'ai-team-comment' | 'close-popup' | 'clear-canvas';
   target?: string;
   position?: { x: number; y: number };
   text?: string;
@@ -107,13 +107,13 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
   const demoRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Get canvas center position accounting for sidebar
+  // Helper function to get canvas center position
   const getCanvasCenter = () => {
     const sidebarWidth = 320; // Sidebar width
     const navbarHeight = 64; // Navbar height
     const statusBarHeight = 32; // Status bar height
-    
     const availableWidth = window.innerWidth - sidebarWidth;
     const availableHeight = window.innerHeight - navbarHeight - statusBarHeight;
     
@@ -127,71 +127,67 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     {
       id: 'startup-intro',
       title: '🚀 MindMeld Enterprise - AI Collaboration Platform',
-      description: 'Professional startup introduction with initial Product Strategy diagram',
-      duration: 8000,
-      narration: 'Welcome to MindMeld Enterprise - the revolutionary AI-powered collaboration platform. Notice how we start with a professional Product Strategy diagram.',
+      description: 'Professional startup introduction with AI-powered workflow',
+      duration: 10000,
+      narration: 'Welcome to MindMeld Enterprise - the revolutionary AI-powered collaboration platform that transforms how teams ideate and make decisions.',
       actions: [
-        { type: 'create-initial-diagram', target: 'product-strategy', delay: 500 },
-        { type: 'highlight', target: 'navbar', delay: 2000, duration: 1500 },
-        { type: 'ai-prompt', text: 'Analyze current product strategy framework', delay: 3500 },
-        { type: 'close-popup', target: 'ai-prompt', delay: 5000 },
-        { type: 'cursor', position: { x: 400, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 6000 },
-        { type: 'cursor', position: { x: 600, y: 400 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 6500 }
+        { type: 'highlight', target: 'navbar', delay: 500, duration: 2000 },
+        { type: 'canvas-action', target: 'create-initial-diagram', delay: 1000 },
+        { type: 'ai-prompt', text: 'Create a workflow diagram for team collaboration', delay: 3000 },
+        { type: 'mermaid-chart', delay: 4500 },
+        { type: 'close-popup', target: 'ai-prompt', delay: 6000 },
+        { type: 'close-popup', target: 'mermaid-chart', delay: 7000 },
+        { type: 'cursor', position: { x: 400, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 8000 },
+        { type: 'cursor', position: { x: 600, y: 400 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 8500 }
       ]
     },
     {
       id: 'sidebar-exploration',
       title: '📂 Complete Sidebar Navigation',
       description: 'Exploring every sidebar section with actual content',
-      duration: 10000,
+      duration: 12000,
       narration: 'Let me show you our comprehensive sidebar navigation. Each section contains powerful features for different aspects of collaboration.',
       actions: [
-        { type: 'sidebar-click', target: 'current-session', delay: 500, duration: 1000 },
-        { type: 'close-popup', target: 'sidebar-content', delay: 1500 },
-        { type: 'sidebar-click', target: 'recent-sessions', delay: 2000, duration: 1000 },
-        { type: 'close-popup', target: 'sidebar-content', delay: 3000 },
-        { type: 'search', text: 'Product Strategy', delay: 3500 },
-        { type: 'close-popup', target: 'search-results', delay: 5000 },
-        { type: 'sidebar-click', target: 'starred', delay: 5500, duration: 1000 },
-        { type: 'close-popup', target: 'sidebar-content', delay: 6500 },
-        { type: 'sidebar-click', target: 'templates', delay: 7000, duration: 1000 },
-        { type: 'close-popup', target: 'sidebar-content', delay: 8000 },
-        { type: 'sidebar-click', target: 'team-spaces', delay: 8500, duration: 1000 },
-        { type: 'close-popup', target: 'sidebar-content', delay: 9500 }
+        { type: 'sidebar-click', target: 'current-session', delay: 500, duration: 1500 },
+        { type: 'sidebar-click', target: 'recent-sessions', delay: 2500, duration: 1500 },
+        { type: 'search', text: 'Product Strategy', delay: 4500 },
+        { type: 'sidebar-click', target: 'starred', delay: 6500, duration: 1500 },
+        { type: 'sidebar-click', target: 'templates', delay: 8500, duration: 1500 },
+        { type: 'sidebar-click', target: 'team-spaces', delay: 10500, duration: 1500 }
       ]
     },
     {
       id: 'new-session-creation',
-      title: '🎯 New Session Creation & Canvas Update',
-      description: 'Creating a new session and updating canvas with new diagram',
+      title: '🎯 New Session Creation & Canvas',
+      description: 'Creating a new session with fresh canvas diagram',
       duration: 8000,
-      narration: 'Now I will create a new collaboration session. Watch as we replace the strategy diagram with a fresh AI Innovation workflow.',
+      narration: 'Now I will create a new collaboration session. Watch as we set up a fresh workspace for our team.',
       actions: [
         { type: 'highlight', target: 'new-session-btn', delay: 500, duration: 1500 },
         { type: 'new-session', delay: 1000 },
         { type: 'type', text: 'AI Innovation Workshop 2024', delay: 2500 },
         { type: 'click', target: 'create-session-btn', delay: 4000 },
-        { type: 'close-popup', target: 'new-session-modal', delay: 4500 },
         { type: 'clear-canvas', delay: 5000 },
-        { type: 'create-initial-diagram', target: 'ai-innovation', delay: 5500 }
+        { type: 'canvas-action', target: 'create-new-session-diagram', delay: 5500 },
+        { type: 'close-popup', target: 'new-session-modal', delay: 7000 }
       ]
     },
     {
       id: 'canvas-collaboration',
       title: '🎨 Advanced Canvas Collaboration with Elbow Curves',
       description: 'Professional canvas tools with team interaction and elbow connectors',
-      duration: 12000,
+      duration: 14000,
       narration: 'Our professional canvas supports real-time collaboration with advanced drawing tools, shapes, and smart elbow curve connections.',
       actions: [
-        { type: 'canvas-action', target: 'create-rectangle', position: { x: 200, y: 150 }, delay: 500 },
-        { type: 'canvas-action', target: 'add-text', text: 'User Research', position: { x: 200, y: 150 }, delay: 1500 },
-        { type: 'cursor', position: { x: 400, y: 200 }, user: 'Sarah Chen', color: '#10B981', delay: 2500 },
-        { type: 'canvas-action', target: 'create-circle', position: { x: 400, y: 200 }, delay: 3000 },
-        { type: 'canvas-action', target: 'add-text', text: 'AI Analysis', position: { x: 400, y: 200 }, delay: 3500 },
+        { type: 'canvas-action', target: 'create-rectangle', position: { x: 300, y: 200 }, delay: 500 },
+        { type: 'canvas-action', target: 'add-text', text: 'User Research', position: { x: 300, y: 200 }, delay: 1500 },
+        { type: 'cursor', position: { x: 500, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 2500 },
+        { type: 'canvas-action', target: 'create-circle', position: { x: 500, y: 300 }, delay: 3000 },
+        { type: 'canvas-action', target: 'add-text', text: 'AI Analysis', position: { x: 500, y: 300 }, delay: 3500 },
         { type: 'canvas-action', target: 'connect-elbow', delay: 4500 },
-        { type: 'cursor', position: { x: 600, y: 150 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 6000 },
-        { type: 'canvas-action', target: 'create-diamond', position: { x: 600, y: 150 }, delay: 6500 },
-        { type: 'canvas-action', target: 'add-text', text: 'Decision', position: { x: 600, y: 150 }, delay: 7000 },
+        { type: 'cursor', position: { x: 700, y: 250 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 6000 },
+        { type: 'canvas-action', target: 'create-diamond', position: { x: 700, y: 250 }, delay: 6500 },
+        { type: 'canvas-action', target: 'add-text', text: 'Decision', position: { x: 700, y: 250 }, delay: 7000 },
         { type: 'canvas-action', target: 'connect-all-elbow', delay: 8500 }
       ]
     },
@@ -199,55 +195,54 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
       id: 'collaboration-panel',
       title: '👥 Team Collaboration with Voting & Reactions',
       description: 'Collaboration panel with voting, comments, and emoji reactions',
-      duration: 10000,
+      duration: 12000,
       narration: 'Our collaboration panel enables rich team interaction with voting, emoji reactions, real-time chat, and comprehensive team management.',
       actions: [
         { type: 'panel', target: 'collaboration-panel', delay: 500 },
-        { type: 'idea', position: { x: 200, y: 350 }, text: 'Implement AI-powered user onboarding', user: 'Sarah Chen', delay: 1500 },
+        { type: 'idea', position: { x: 200, y: 150 }, text: 'Implement AI-powered user onboarding', user: 'Sarah Chen', delay: 1500 },
         { type: 'vote', target: 'idea-1', user: 'Marcus Rodriguez', delay: 2500 },
-        { type: 'emoji', emoji: '👍', position: { x: 250, y: 350 }, user: 'Emily Watson', delay: 3000 },
-        { type: 'emoji', emoji: '❤️', position: { x: 270, y: 350 }, user: 'You', delay: 3500 },
-        { type: 'comment', position: { x: 200, y: 380 }, text: 'This aligns perfectly with our Q4 goals!', user: 'Marcus Rodriguez', delay: 4500 },
-        { type: 'idea', position: { x: 450, y: 350 }, text: 'Mobile-first design system', user: 'Emily Watson', delay: 6000 },
+        { type: 'emoji', emoji: '👍', position: { x: 250, y: 150 }, user: 'Emily Watson', delay: 3000 },
+        { type: 'emoji', emoji: '❤️', position: { x: 270, y: 150 }, user: 'You', delay: 3500 },
+        { type: 'comment', position: { x: 200, y: 180 }, text: 'This aligns perfectly with our Q4 goals!', user: 'Marcus Rodriguez', delay: 4500 },
+        { type: 'idea', position: { x: 450, y: 200 }, text: 'Mobile-first design system', user: 'Emily Watson', delay: 6000 },
         { type: 'vote', target: 'idea-2', user: 'Sarah Chen', delay: 6500 },
-        { type: 'emoji', emoji: '🚀', position: { x: 500, y: 350 }, user: 'Marcus Rodriguez', delay: 7000 },
-        { type: 'emoji', emoji: '⭐', position: { x: 520, y: 350 }, user: 'AI Assistant', delay: 7500 }
+        { type: 'emoji', emoji: '🚀', position: { x: 500, y: 200 }, user: 'Marcus Rodriguez', delay: 7000 },
+        { type: 'emoji', emoji: '⭐', position: { x: 520, y: 200 }, user: 'AI Assistant', delay: 7500 },
+        { type: 'close-panel', target: 'collaboration-panel', delay: 11000 }
       ]
     },
     {
       id: 'ai-insights-complete',
       title: '🧠 Complete AI Analysis & Team AI Insights',
       description: 'AI prompting, analysis, team member AI interactions, and comprehensive reports',
-      duration: 14000,
+      duration: 16000,
       narration: 'Watch our advanced AI system analyze all ideas, generate comprehensive insights, and even participate as a team member with intelligent suggestions and detailed reports.',
       actions: [
-        { type: 'close-panel', target: 'collaboration-panel', delay: 500 },
         { type: 'panel', target: 'ai-panel', delay: 1000 },
         { type: 'click', target: 'generate-insights', delay: 2000 },
         { type: 'wait', delay: 3000 },
         { type: 'ai-insights', delay: 5000 },
-        { type: 'highlight', target: 'ai-themes', delay: 6000, duration: 1500 },
-        { type: 'highlight', target: 'ai-breakthrough', delay: 7500, duration: 1500 },
-        { type: 'cursor', position: { x: 350, y: 450 }, user: 'AI Assistant', color: '#8B5CF6', delay: 9000 },
-        { type: 'ai-team-comment', position: { x: 350, y: 450 }, text: 'Based on the analysis, I recommend focusing on user-centric AI features first. The data shows 89% confidence in this direction.', user: 'AI Assistant', delay: 9500 },
-        { type: 'emoji', emoji: '🏆', position: { x: 400, y: 450 }, user: 'AI Assistant', delay: 11000 },
-        { type: 'highlight', target: 'ai-recommendations', delay: 12000, duration: 1500 }
+        { type: 'highlight', target: 'ai-themes', delay: 6000, duration: 2000 },
+        { type: 'highlight', target: 'ai-breakthrough', delay: 8000, duration: 2000 },
+        { type: 'cursor', position: { x: 350, y: 400 }, user: 'AI Assistant', color: '#8B5CF6', delay: 10000 },
+        { type: 'ai-team-comment', position: { x: 350, y: 400 }, text: 'Based on the analysis, I recommend focusing on user-centric AI features first. The data shows 89% confidence in this direction.', user: 'AI Assistant', delay: 10500 },
+        { type: 'emoji', emoji: '🏆', position: { x: 400, y: 400 }, user: 'AI Assistant', delay: 12000 },
+        { type: 'highlight', target: 'ai-recommendations', delay: 13000, duration: 2000 },
+        { type: 'close-panel', target: 'ai-panel', delay: 15000 }
       ]
     },
     {
       id: 'decision-finalization',
       title: '✅ Decision Finalization & Export',
       description: 'Complete workflow to final decision with export options',
-      duration: 8000,
+      duration: 10000,
       narration: 'Finally, we finalize our decisions based on team consensus and AI insights, then export our collaborative session for stakeholders.',
       actions: [
-        { type: 'highlight', target: 'top-idea', delay: 500, duration: 1500 },
-        { type: 'emoji', emoji: '✅', position: { x: 200, y: 350 }, user: 'Team Decision', delay: 2000 },
-        { type: 'close-panel', target: 'ai-panel', delay: 3500 },
-        { type: 'highlight', target: 'export-button', delay: 4500, duration: 1500 },
+        { type: 'highlight', target: 'top-idea', delay: 500, duration: 2000 },
+        { type: 'emoji', emoji: '✅', position: { x: 200, y: 150 }, user: 'Team Decision', delay: 2000 },
+        { type: 'highlight', target: 'export-button', delay: 4500, duration: 2000 },
         { type: 'click', target: 'export-menu', delay: 5500 },
-        { type: 'highlight', target: 'share-button', delay: 6500, duration: 1500 },
-        { type: 'close-popup', target: 'all', delay: 7500 }
+        { type: 'highlight', target: 'share-button', delay: 7500, duration: 2000 }
       ]
     }
   ];
@@ -260,14 +255,17 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     return () => clearTimeout(timer);
   }, []);
 
-  // Demo progression logic with faster pacing
+  // Demo progression logic with proper cleanup
   useEffect(() => {
     if (!isPlaying) return;
 
     const currentStepData = demoSteps[currentStep];
     if (!currentStepData) {
       setIsPlaying(false);
-      onDemoComplete?.();
+      // Use timeout to avoid state update during render
+      completionTimeoutRef.current = setTimeout(() => {
+        onDemoComplete?.();
+      }, 100);
       return;
     }
 
@@ -276,16 +274,16 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     // Voice narration with better modulation
     if (voiceEnabled && 'speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(currentStepData.narration);
-      utterance.rate = 1.1; // Faster speech
-      utterance.pitch = 1.2; // Higher pitch for professional sound
-      utterance.volume = 0.9;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.1;
+      utterance.volume = 0.8;
       speechRef.current = utterance;
       speechSynthesis.speak(utterance);
     }
 
     intervalRef.current = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + (100 / (currentStepData.duration / 80)); // Faster progress
+        const newProgress = prev + (100 / (currentStepData.duration / 100));
         
         if (newProgress >= 100) {
           if (currentStep < demoSteps.length - 1) {
@@ -293,14 +291,17 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             return 0;
           } else {
             setIsPlaying(false);
-            onDemoComplete?.();
+            // Use timeout to avoid state update during render
+            completionTimeoutRef.current = setTimeout(() => {
+              onDemoComplete?.();
+            }, 100);
             return 100;
           }
         }
         
         return newProgress;
       });
-    }, 80); // Faster updates
+    }, 100);
 
     return () => {
       if (intervalRef.current) {
@@ -309,10 +310,13 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
       if (speechRef.current) {
         speechSynthesis.cancel();
       }
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+      }
     };
   }, [isPlaying, currentStep, onDemoComplete, voiceEnabled]);
 
-  // Execute demo actions with faster timing
+  // Execute demo actions with proper timing
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -322,43 +326,12 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     currentStepData.actions.forEach((action, index) => {
       setTimeout(() => {
         executeAction(action);
-      }, action.delay || index * 800); // Faster action timing
+      }, action.delay || index * 1000);
     });
   }, [currentStep, isPlaying]);
 
   const executeAction = (action: DemoAction) => {
     switch (action.type) {
-      case 'create-initial-diagram':
-        createInitialDiagram(action.target || 'product-strategy');
-        break;
-
-      case 'clear-canvas':
-        setCanvasShapes([]);
-        break;
-
-      case 'close-popup':
-        if (action.target === 'ai-prompt') {
-          setShowAIPrompt(false);
-        } else if (action.target === 'mermaid-chart') {
-          setShowMermaidChart(false);
-        } else if (action.target === 'sidebar-content') {
-          setSidebarContent(null);
-        } else if (action.target === 'search-results') {
-          setSearchResults([]);
-        } else if (action.target === 'new-session-modal') {
-          setNewSessionModal(false);
-        } else if (action.target === 'all') {
-          // Close all popups
-          setShowAIPrompt(false);
-          setShowMermaidChart(false);
-          setSidebarContent(null);
-          setSearchResults([]);
-          setNewSessionModal(false);
-          setAiInsightsData(null);
-          setHighlightedElement(null);
-        }
-        break;
-
       case 'cursor':
         if (action.position && action.user && action.color) {
           setCursors(prev => [
@@ -398,18 +371,19 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
 
       case 'emoji':
         if (action.emoji && action.position && action.user) {
+          const reactionId = `emoji-${Date.now()}`;
           setEmojiReactions(prev => [...prev, {
-            id: `emoji-${Date.now()}`,
+            id: reactionId,
             emoji: action.emoji,
             position: action.position,
             user: action.user,
             timestamp: new Date()
           }]);
           
-          // Remove emoji after 2 seconds (faster)
+          // Remove emoji after 3 seconds
           setTimeout(() => {
-            setEmojiReactions(prev => prev.filter(e => e.id !== `emoji-${Date.now()}`));
-          }, 2000);
+            setEmojiReactions(prev => prev.filter(e => e.id !== reactionId));
+          }, 3000);
         }
         break;
 
@@ -493,7 +467,8 @@ graph TD
         setHighlightedElement(`sidebar-${action.target}`);
         setTimeout(() => {
           setHighlightedElement(null);
-        }, action.duration || 1000);
+          setSidebarContent(null);
+        }, action.duration || 1500);
         break;
 
       case 'search':
@@ -503,6 +478,7 @@ graph TD
             { name: 'Design Sprint Workshop', type: 'session', participants: 12 },
             { name: 'User Journey Mapping', type: 'session', participants: 6 }
           ]);
+          setTimeout(() => setSearchResults([]), 3000);
         }
         break;
 
@@ -510,14 +486,177 @@ graph TD
         setNewSessionModal(true);
         break;
 
+      case 'clear-canvas':
+        setCanvasShapes([]);
+        break;
+
       case 'canvas-action':
-        if (action.target === 'create-rectangle' && action.position) {
+        const center = getCanvasCenter();
+        
+        if (action.target === 'create-initial-diagram') {
+          // Create Product Strategy diagram
+          setCanvasShapes([
+            // Central Vision node
+            {
+              id: 'vision-center',
+              type: 'circle',
+              position: { x: center.x - 60, y: center.y - 30 },
+              text: 'Product Strategy',
+              color: '#3B82F6',
+              size: { width: 120, height: 60 }
+            },
+            // Market Research
+            {
+              id: 'market-research',
+              type: 'rectangle',
+              position: { x: center.x - 200, y: center.y - 100 },
+              text: 'Market Research',
+              color: '#10B981',
+              size: { width: 100, height: 50 }
+            },
+            // User Needs
+            {
+              id: 'user-needs',
+              type: 'rectangle',
+              position: { x: center.x + 100, y: center.y - 100 },
+              text: 'User Needs',
+              color: '#F59E0B',
+              size: { width: 100, height: 50 }
+            },
+            // Competitive Analysis
+            {
+              id: 'competitive',
+              type: 'rectangle',
+              position: { x: center.x - 200, y: center.y + 50 },
+              text: 'Competitive Analysis',
+              color: '#EF4444',
+              size: { width: 100, height: 50 }
+            },
+            // Implementation
+            {
+              id: 'implementation',
+              type: 'rectangle',
+              position: { x: center.x + 100, y: center.y + 50 },
+              text: 'Implementation',
+              color: '#8B5CF6',
+              size: { width: 100, height: 50 }
+            },
+            // Connectors
+            {
+              id: 'connector-1',
+              type: 'elbow-connector',
+              startPos: { x: center.x - 60, y: center.y - 30 },
+              endPos: { x: center.x - 150, y: center.y - 75 },
+              color: '#6B7280'
+            },
+            {
+              id: 'connector-2',
+              type: 'elbow-connector',
+              startPos: { x: center.x + 60, y: center.y - 30 },
+              endPos: { x: center.x + 150, y: center.y - 75 },
+              color: '#6B7280'
+            },
+            {
+              id: 'connector-3',
+              type: 'elbow-connector',
+              startPos: { x: center.x - 60, y: center.y + 30 },
+              endPos: { x: center.x - 150, y: center.y + 75 },
+              color: '#6B7280'
+            },
+            {
+              id: 'connector-4',
+              type: 'elbow-connector',
+              startPos: { x: center.x + 60, y: center.y + 30 },
+              endPos: { x: center.x + 150, y: center.y + 75 },
+              color: '#6B7280'
+            }
+          ]);
+        } else if (action.target === 'create-new-session-diagram') {
+          // Create AI Innovation diagram
+          setCanvasShapes([
+            // Central Hub
+            {
+              id: 'ai-hub',
+              type: 'circle',
+              position: { x: center.x - 75, y: center.y - 37 },
+              text: 'AI Innovation Hub',
+              color: '#8B5CF6',
+              size: { width: 150, height: 75 }
+            },
+            // Research
+            {
+              id: 'research',
+              type: 'rectangle',
+              position: { x: center.x - 180, y: center.y - 80 },
+              text: 'Research',
+              color: '#3B82F6',
+              size: { width: 80, height: 40 }
+            },
+            // Development
+            {
+              id: 'development',
+              type: 'rectangle',
+              position: { x: center.x + 100, y: center.y - 80 },
+              text: 'Development',
+              color: '#10B981',
+              size: { width: 80, height: 40 }
+            },
+            // Testing
+            {
+              id: 'testing',
+              type: 'rectangle',
+              position: { x: center.x - 180, y: center.y + 40 },
+              text: 'Testing',
+              color: '#F59E0B',
+              size: { width: 80, height: 40 }
+            },
+            // Deployment
+            {
+              id: 'deployment',
+              type: 'rectangle',
+              position: { x: center.x + 100, y: center.y + 40 },
+              text: 'Deployment',
+              color: '#EF4444',
+              size: { width: 80, height: 40 }
+            },
+            // Connectors
+            {
+              id: 'ai-connector-1',
+              type: 'elbow-connector',
+              startPos: { x: center.x - 75, y: center.y - 37 },
+              endPos: { x: center.x - 140, y: center.y - 60 },
+              color: '#8B5CF6'
+            },
+            {
+              id: 'ai-connector-2',
+              type: 'elbow-connector',
+              startPos: { x: center.x + 75, y: center.y - 37 },
+              endPos: { x: center.x + 140, y: center.y - 60 },
+              color: '#8B5CF6'
+            },
+            {
+              id: 'ai-connector-3',
+              type: 'elbow-connector',
+              startPos: { x: center.x - 75, y: center.y + 37 },
+              endPos: { x: center.x - 140, y: center.y + 60 },
+              color: '#8B5CF6'
+            },
+            {
+              id: 'ai-connector-4',
+              type: 'elbow-connector',
+              startPos: { x: center.x + 75, y: center.y + 37 },
+              endPos: { x: center.x + 140, y: center.y + 60 },
+              color: '#8B5CF6'
+            }
+          ]);
+        } else if (action.target === 'create-rectangle' && action.position) {
           setCanvasShapes(prev => [...prev, {
             id: `shape-${Date.now()}`,
             type: 'rectangle',
             position: action.position,
             text: '',
-            color: '#3B82F6'
+            color: '#3B82F6',
+            size: { width: 120, height: 60 }
           }]);
         } else if (action.target === 'create-circle' && action.position) {
           setCanvasShapes(prev => [...prev, {
@@ -525,7 +664,8 @@ graph TD
             type: 'circle',
             position: action.position,
             text: '',
-            color: '#10B981'
+            color: '#10B981',
+            size: { width: 100, height: 100 }
           }]);
         } else if (action.target === 'create-diamond' && action.position) {
           setCanvasShapes(prev => [...prev, {
@@ -533,11 +673,12 @@ graph TD
             type: 'diamond',
             position: action.position,
             text: '',
-            color: '#F59E0B'
+            color: '#F59E0B',
+            size: { width: 80, height: 80 }
           }]);
         } else if (action.target === 'add-text' && action.text && action.position) {
           setCanvasShapes(prev => prev.map(shape => 
-            shape.position.x === action.position?.x && shape.position.y === action.position?.y
+            shape.position && shape.position.x === action.position?.x && shape.position.y === action.position?.y
               ? { ...shape, text: action.text }
               : shape
           ));
@@ -546,8 +687,8 @@ graph TD
           setCanvasShapes(prev => [...prev, {
             id: `connector-${Date.now()}`,
             type: 'elbow-connector',
-            startPos: { x: 300, y: 200 },
-            endPos: { x: 400, y: 250 },
+            startPos: { x: 400, y: 250 },
+            endPos: { x: 500, y: 350 },
             color: '#8B5CF6'
           }]);
         }
@@ -573,184 +714,25 @@ graph TD
         }, 100);
         break;
 
+      case 'close-popup':
+        if (action.target === 'ai-prompt') {
+          setShowAIPrompt(false);
+        } else if (action.target === 'mermaid-chart') {
+          setShowMermaidChart(false);
+        } else if (action.target === 'new-session-modal') {
+          setNewSessionModal(false);
+        }
+        break;
+
       case 'highlight':
         setHighlightedElement(action.target || null);
-        setTimeout(() => setHighlightedElement(null), action.duration || 1500);
+        setTimeout(() => setHighlightedElement(null), action.duration || 2000);
         break;
 
       case 'wait':
         // Just wait
         break;
     }
-  };
-
-  const createInitialDiagram = (diagramType: string) => {
-    const center = getCanvasCenter();
-    
-    // Clear existing shapes first
-    setCanvasShapes([]);
-    
-    setTimeout(() => {
-      if (diagramType === 'product-strategy') {
-        // Product Strategy Diagram - Center aligned
-        const shapes = [
-          // Central Vision
-          {
-            id: 'vision-center',
-            type: 'star',
-            position: { x: center.x - 60, y: center.y - 60 },
-            text: 'Product Vision',
-            color: '#8B5CF6',
-            size: { width: 120, height: 120 }
-          },
-          // Market Research
-          {
-            id: 'market-research',
-            type: 'rectangle',
-            position: { x: center.x - 200, y: center.y - 150 },
-            text: 'Market Research',
-            color: '#3B82F6',
-            size: { width: 120, height: 80 }
-          },
-          // User Needs
-          {
-            id: 'user-needs',
-            type: 'circle',
-            position: { x: center.x + 80, y: center.y - 150 },
-            text: 'User Needs',
-            color: '#10B981',
-            size: { width: 100, height: 100 }
-          },
-          // Competitive Analysis
-          {
-            id: 'competitive',
-            type: 'rectangle',
-            position: { x: center.x - 200, y: center.y + 70 },
-            text: 'Competitive Analysis',
-            color: '#F59E0B',
-            size: { width: 120, height: 80 }
-          },
-          // Implementation
-          {
-            id: 'implementation',
-            type: 'diamond',
-            position: { x: center.x + 80, y: center.y + 70 },
-            text: 'Implementation',
-            color: '#EF4444',
-            size: { width: 100, height: 100 }
-          },
-          // Connectors
-          {
-            id: 'connector-1',
-            type: 'elbow-connector',
-            startPos: { x: center.x - 80, y: center.y - 110 },
-            endPos: { x: center.x - 40, y: center.y - 60 },
-            color: '#8B5CF6'
-          },
-          {
-            id: 'connector-2',
-            type: 'elbow-connector',
-            startPos: { x: center.x + 80, y: center.y - 100 },
-            endPos: { x: center.x + 40, y: center.y - 60 },
-            color: '#8B5CF6'
-          },
-          {
-            id: 'connector-3',
-            type: 'elbow-connector',
-            startPos: { x: center.x - 80, y: center.y + 110 },
-            endPos: { x: center.x - 40, y: center.y + 60 },
-            color: '#8B5CF6'
-          },
-          {
-            id: 'connector-4',
-            type: 'elbow-connector',
-            startPos: { x: center.x + 80, y: center.y + 120 },
-            endPos: { x: center.x + 40, y: center.y + 60 },
-            color: '#8B5CF6'
-          }
-        ];
-        setCanvasShapes(shapes);
-      } else if (diagramType === 'ai-innovation') {
-        // AI Innovation Workshop Diagram - Center aligned
-        const shapes = [
-          // Central AI Hub
-          {
-            id: 'ai-hub',
-            type: 'star',
-            position: { x: center.x - 60, y: center.y - 60 },
-            text: 'AI Innovation Hub',
-            color: '#8B5CF6',
-            size: { width: 120, height: 120 }
-          },
-          // Research Phase
-          {
-            id: 'research',
-            type: 'circle',
-            position: { x: center.x - 180, y: center.y - 60 },
-            text: 'Research',
-            color: '#3B82F6',
-            size: { width: 100, height: 100 }
-          },
-          // Development
-          {
-            id: 'development',
-            type: 'rectangle',
-            position: { x: center.x - 60, y: center.y - 180 },
-            text: 'Development',
-            color: '#10B981',
-            size: { width: 120, height: 80 }
-          },
-          // Testing
-          {
-            id: 'testing',
-            type: 'diamond',
-            position: { x: center.x + 80, y: center.y - 60 },
-            text: 'Testing',
-            color: '#F59E0B',
-            size: { width: 100, height: 100 }
-          },
-          // Deployment
-          {
-            id: 'deployment',
-            type: 'rectangle',
-            position: { x: center.x - 60, y: center.y + 80 },
-            text: 'Deployment',
-            color: '#EF4444',
-            size: { width: 120, height: 80 }
-          },
-          // Connectors with elbow curves
-          {
-            id: 'ai-connector-1',
-            type: 'elbow-connector',
-            startPos: { x: center.x - 80, y: center.y - 60 },
-            endPos: { x: center.x - 60, y: center.y - 60 },
-            color: '#8B5CF6'
-          },
-          {
-            id: 'ai-connector-2',
-            type: 'elbow-connector',
-            startPos: { x: center.x, y: center.y - 60 },
-            endPos: { x: center.x, y: center.y - 100 },
-            color: '#8B5CF6'
-          },
-          {
-            id: 'ai-connector-3',
-            type: 'elbow-connector',
-            startPos: { x: center.x + 60, y: center.y - 60 },
-            endPos: { x: center.x + 80, y: center.y - 60 },
-            color: '#8B5CF6'
-          },
-          {
-            id: 'ai-connector-4',
-            type: 'elbow-connector',
-            startPos: { x: center.x, y: center.y + 60 },
-            endPos: { x: center.x, y: center.y + 80 },
-            color: '#8B5CF6'
-          }
-        ];
-        setCanvasShapes(shapes);
-      }
-    }, 100);
   };
 
   const togglePlayPause = () => {
@@ -1087,8 +1069,8 @@ graph TD
             exit={{ opacity: 0, scale: 0.8, y: -20 }}
             className="absolute pointer-events-none z-30"
             style={{
-              left: idea.position.x,
-              top: idea.position.y,
+              left: idea.position?.x || 0,
+              top: idea.position?.y || 0,
             }}
           >
             <div className="w-56 bg-yellow-100 border-2 border-yellow-300 rounded-xl p-3 shadow-lg">
@@ -1121,8 +1103,8 @@ graph TD
             transition={{ duration: 0.5 }}
             className="absolute pointer-events-none z-50 text-xl"
             style={{
-              left: reaction.position.x,
-              top: reaction.position.y,
+              left: reaction.position?.x || 0,
+              top: reaction.position?.y || 0,
             }}
           >
             {reaction.emoji}
@@ -1130,7 +1112,7 @@ graph TD
         ))}
       </AnimatePresence>
 
-      {/* Canvas Shapes with Proper Positioning and Elbow Connectors */}
+      {/* Canvas Shapes with Elbow Connectors */}
       <AnimatePresence>
         {canvasShapes.map((shape) => (
           <motion.div
@@ -1140,8 +1122,8 @@ graph TD
             exit={{ opacity: 0, scale: 0.8 }}
             className="absolute pointer-events-none z-25"
             style={{
-              left: shape.position?.x || shape.startPos?.x,
-              top: shape.position?.y || shape.startPos?.y,
+              left: shape.position?.x || shape.startPos?.x || 0,
+              top: shape.position?.y || shape.startPos?.y || 0,
             }}
           >
             {shape.type === 'elbow-connector' ? (
@@ -1164,13 +1146,12 @@ graph TD
                 className={`flex items-center justify-center text-white text-xs font-medium shadow-lg ${
                   shape.type === 'rectangle' ? 'rounded-lg' :
                   shape.type === 'circle' ? 'rounded-full' :
-                  shape.type === 'star' ? 'rounded-lg' :
                   'transform rotate-45 rounded-lg'
                 }`}
                 style={{ 
                   backgroundColor: shape.color,
-                  width: shape.size?.width || (shape.type === 'circle' ? '80px' : '100px'),
-                  height: shape.size?.height || (shape.type === 'circle' ? '80px' : '60px')
+                  width: shape.size?.width || 80,
+                  height: shape.size?.height || 40
                 }}
               >
                 <span className={shape.type === 'diamond' ? 'transform -rotate-45' : ''}>
@@ -1192,8 +1173,8 @@ graph TD
             exit={{ opacity: 0, scale: 0.8 }}
             className="absolute pointer-events-none z-30"
             style={{
-              left: comment.position.x + 20,
-              top: comment.position.y - 10,
+              left: (comment.position?.x || 0) + 20,
+              top: (comment.position?.y || 0) - 10,
             }}
           >
             <div className={`max-w-xs border rounded-lg p-2 shadow-lg ${
@@ -1373,7 +1354,12 @@ graph TD
                 Watch Again
               </button>
               <button
-                onClick={onDemoComplete}
+                onClick={() => {
+                  // Use timeout to avoid state update during render
+                  setTimeout(() => {
+                    onDemoComplete?.();
+                  }, 100);
+                }}
                 className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-sm"
               >
                 Get Started
