@@ -6,8 +6,6 @@ import { CanvasObject, Point, Tool } from '../../types/canvas';
 import { CanvasToolbar } from './CanvasToolbar';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { CanvasGrid } from './CanvasGrid';
-import { MiniMap } from './MiniMap';
-import { LayerPanel } from './LayerPanel';
 import { PropertyPanel } from './PropertyPanel';
 import { CommentSystem } from './CommentSystem';
 import { CollaborativeCursors } from './CollaborativeCursors';
@@ -63,8 +61,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Point | null>(null);
   const [selectionBox, setSelectionBox] = useState<{ start: Point; end: Point } | null>(null);
-  const [showMiniMap, setShowMiniMap] = useState(true);
-  const [showLayers, setShowLayers] = useState(false);
   const [showProperties, setShowProperties] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -644,8 +640,22 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     }, 100);
   }, [addObject, currentUser, selectObjects, canvasState.objects]);
 
-  // FIXED: Smart connector with proper node structure
+  // FIXED: Smart connector with proper elbow curve
   const addConnector = useCallback((start: { objectId: string; point: Point }, end: { objectId: string; point: Point }) => {
+    const startX = start.point.x;
+    const startY = start.point.y;
+    const endX = end.point.x;
+    const endY = end.point.y;
+    
+    // Create elbow curve points
+    const midX = startX + (endX - startX) * 0.5;
+    const elbowPoints = [
+      0, 0,           // Start point
+      midX - startX, 0,     // First elbow point
+      midX - startX, endY - startY,  // Second elbow point
+      endX - startX, endY - startY   // End point
+    ];
+
     addObject({
       type: 'connector',
       position: start.point,
@@ -661,9 +671,10 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       metadata: {
         startObjectId: start.objectId,
         endObjectId: end.objectId,
-        points: [0, 0, end.point.x - start.point.x, end.point.y - start.point.y],
+        points: elbowPoints,
         arrowEnd: true,
-        connectorType: 'smart'
+        connectorType: 'smart',
+        isElbow: true
       }
     });
   }, [addObject, currentColor, currentStrokeWidth, currentUser]);
@@ -806,7 +817,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     }
   };
 
-  // FIXED: Render canvas objects with node points for connectors
+  // FIXED: Render canvas objects with node points for connectors and elbow curves
   const renderObjects = () => {
     return canvasState.objects.map(obj => {
       const key = obj.id;
@@ -1103,18 +1114,17 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         case 'connector':
           const arrowPoints = obj.metadata?.points || [0, 0, 100, 0];
           const isSmartConnector = obj.metadata?.connectorType === 'smart';
+          const isElbow = obj.metadata?.isElbow;
+          
           return (
             <Group key={key}>
-              <Arrow
+              <Line
                 id={obj.id}
                 x={obj.position.x}
                 y={obj.position.y}
                 points={arrowPoints}
                 stroke={obj.style.stroke || '#000000'}
                 strokeWidth={obj.style.strokeWidth || 2}
-                fill={obj.style.fill || obj.style.stroke || '#000000'}
-                pointerLength={12}
-                pointerWidth={10}
                 lineCap="round"
                 lineJoin="round"
                 opacity={obj.style.opacity || 1}
@@ -1126,7 +1136,24 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                 shadowOffset={{ x: 2, y: 2 }}
                 shadowOpacity={0.3}
                 dash={isSmartConnector ? [8, 4] : undefined}
+                tension={isElbow ? 0 : 0.3}
               />
+              
+              {/* Arrow head for connectors */}
+              {obj.type === 'arrow' && (
+                <RegularPolygon
+                  x={obj.position.x + arrowPoints[arrowPoints.length - 2]}
+                  y={obj.position.y + arrowPoints[arrowPoints.length - 1]}
+                  sides={3}
+                  radius={8}
+                  fill={obj.style.fill || obj.style.stroke || '#000000'}
+                  rotation={Math.atan2(
+                    arrowPoints[arrowPoints.length - 1] - arrowPoints[arrowPoints.length - 3],
+                    arrowPoints[arrowPoints.length - 2] - arrowPoints[arrowPoints.length - 4]
+                  ) * 180 / Math.PI + 90}
+                />
+              )}
+              
               {isSmartConnector && (
                 <Text
                   text="Smart"
@@ -1147,7 +1174,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-gray-50">
+    <div className="relative w-full h-full overflow-hidden bg-white">
       {/* Canvas Toolbar */}
       <CanvasToolbar
         activeTool={activeTool}
@@ -1156,8 +1183,8 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         onZoomChange={setZoom}
         onResetView={resetViewport}
         onFitToScreen={fitToScreen}
-        onToggleMiniMap={() => setShowMiniMap(!showMiniMap)}
-        onToggleLayers={() => setShowLayers(!showLayers)}
+        onToggleMiniMap={() => {}} // Disabled for demo
+        onToggleLayers={() => {}}
         onToggleProperties={() => setShowProperties(!showProperties)}
         onToggleComments={() => setShowComments(!showComments)}
         currentColor={currentColor}
@@ -1289,33 +1316,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       </AnimatePresence>
 
       <AnimatePresence>
-        {showMiniMap && (
-          <MiniMap
-            objects={canvasState.objects}
-            viewport={canvasState.viewport}
-            canvasSize={{ width, height }}
-            onViewportChange={(viewport) => {
-              const stage = stageRef.current;
-              if (stage) {
-                stage.position({ x: viewport.x, y: viewport.y });
-                stage.scale({ x: viewport.zoom, y: viewport.zoom });
-                stage.batchDraw();
-              }
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showLayers && (
-          <LayerPanel
-            layers={canvasState.layers}
-            onClose={() => setShowLayers(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
         {showProperties && canvasState.selectedIds.length > 0 && (
           <PropertyPanel
             selectedObjects={canvasState.objects.filter(obj => canvasState.selectedIds.includes(obj.id))}
@@ -1332,31 +1332,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
           />
         )}
       </AnimatePresence>
-
-      {canvasState.objects.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center space-y-4 bg-white/95 p-8 rounded-xl shadow-lg backdrop-blur-sm">
-            <h3 className="text-2xl font-bold text-gray-700">
-              🎨 Professional Miro Canvas
-            </h3>
-            <div className="text-gray-600 space-y-2 text-left">
-              <p>✅ <strong>Perfect Text Editing:</strong> Double-click ANY object (shapes, sticky notes, text)</p>
-              <p>✅ <strong>Smart Keyboard Shortcuts:</strong> Disabled during text editing</p>
-              <p>✅ <strong>Working Eraser:</strong> Click any object to delete instantly</p>
-              <p>✅ <strong>Smart Connectors:</strong> Click object A, then B to create connections</p>
-              <p>✅ <strong>Node Points:</strong> Visible on shapes when using connector tool</p>
-              <p>✅ <strong>Multi-headed Arrows:</strong> Various arrow types and properties</p>
-              <p>✅ <strong>Dotted Lines:</strong> Smart connectors use dotted style</p>
-              <p>✅ <strong>Properties Panel:</strong> Auto-opens when selecting objects</p>
-              <p>✅ <strong>Partial Selection:</strong> Drag selection box for multiple objects</p>
-              <p>✅ <strong>Perfect Resizing:</strong> Objects maintain proper size</p>
-            </div>
-            <div className="text-sm text-gray-500 mt-4">
-              <p>Click same tool again to deactivate • Hold Space to pan • All features working perfectly!</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {connectorMode === 'creating' && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
