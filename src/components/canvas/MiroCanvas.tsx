@@ -6,11 +6,6 @@ import { CanvasObject, Point, Tool } from '../../types/canvas';
 import { CanvasToolbar } from './CanvasToolbar';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { CanvasGrid } from './CanvasGrid';
-import { StickyNoteComponent } from './objects/StickyNoteComponent';
-import { TextBoxComponent } from './objects/TextBoxComponent';
-import { ShapeComponent } from './objects/ShapeComponent';
-import { LineComponent } from './objects/LineComponent';
-import { FrameComponent } from './objects/FrameComponent';
 import { SelectionBox } from './SelectionBox';
 import { MiniMap } from './MiniMap';
 import { LayerPanel } from './LayerPanel';
@@ -73,6 +68,23 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   const [showLayers, setShowLayers] = useState(false);
   const [showProperties, setShowProperties] = useState(true);
   const [showComments, setShowComments] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentPath, setCurrentPath] = useState<number[]>([]);
+  const [currentColor, setCurrentColor] = useState('#000000');
+  const [currentStrokeWidth, setCurrentStrokeWidth] = useState(2);
+
+  // Initialize default tool
+  useEffect(() => {
+    if (!activeTool) {
+      setActiveTool({ 
+        id: 'select', 
+        name: 'Select', 
+        icon: null, 
+        cursor: 'default', 
+        category: 'select' 
+      });
+    }
+  }, [activeTool, setActiveTool]);
 
   // Keyboard shortcuts
   useHotkeys('ctrl+z, cmd+z', undo);
@@ -95,6 +107,8 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   useHotkeys('escape', clearSelection);
   useHotkeys('space', () => setIsSpacePressed(true), { keyup: true });
   useHotkeys('space', () => setIsSpacePressed(false), { keydown: false });
+
+  // Tool shortcuts
   useHotkeys('v', () => setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' }));
   useHotkeys('h', () => setActiveTool({ id: 'hand', name: 'Hand', icon: null, cursor: 'grab', category: 'select' }));
   useHotkeys('t', () => setActiveTool({ id: 'text', name: 'Text', icon: null, cursor: 'text', category: 'text' }));
@@ -102,6 +116,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   useHotkeys('o', () => setActiveTool({ id: 'circle', name: 'Circle', icon: null, cursor: 'crosshair', category: 'shape' }));
   useHotkeys('l', () => setActiveTool({ id: 'line', name: 'Line', icon: null, cursor: 'crosshair', category: 'draw' }));
   useHotkeys('s', () => setActiveTool({ id: 'sticky', name: 'Sticky Note', icon: null, cursor: 'crosshair', category: 'text' }));
+  useHotkeys('p', () => setActiveTool({ id: 'pen', name: 'Pen', icon: null, cursor: 'crosshair', category: 'draw' }));
   useHotkeys('ctrl+0, cmd+0', resetViewport);
   useHotkeys('ctrl+1, cmd+1', fitToScreen);
 
@@ -144,6 +159,12 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     const pos = stage.getPointerPosition();
     if (!pos) return;
 
+    // Convert screen coordinates to canvas coordinates
+    const canvasPos = {
+      x: (pos.x - stage.x()) / stage.scaleX(),
+      y: (pos.y - stage.y()) / stage.scaleY()
+    };
+
     // Close context menu
     setContextMenu(null);
 
@@ -157,19 +178,22 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     if (activeTool) {
       switch (activeTool.id) {
         case 'sticky':
-          addStickyNote(pos);
+          addStickyNote(canvasPos);
           break;
         case 'text':
-          addTextBox(pos);
+          addTextBox(canvasPos);
           break;
         case 'rectangle':
-          addRectangle(pos);
+          addRectangle(canvasPos);
           break;
         case 'circle':
-          addCircle(pos);
+          addCircle(canvasPos);
           break;
         case 'line':
-          startDrawingLine(pos);
+          addLine(canvasPos);
+          break;
+        case 'arrow':
+          addArrow(canvasPos);
           break;
       }
     }
@@ -183,6 +207,11 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     const pos = stage.getPointerPosition();
     if (!pos) return;
 
+    const canvasPos = {
+      x: (pos.x - stage.x()) / stage.scaleX(),
+      y: (pos.y - stage.y()) / stage.scaleY()
+    };
+
     if (isSpacePressed || activeTool?.id === 'hand') {
       setIsDragging(true);
       setDragStart(pos);
@@ -190,8 +219,14 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
+    if (activeTool?.id === 'pen') {
+      setIsDrawing(true);
+      setCurrentPath([canvasPos.x, canvasPos.y]);
+      return;
+    }
+
     if (activeTool?.id === 'select' && e.target === stage) {
-      setSelectionBox({ start: pos, end: pos });
+      setSelectionBox({ start: canvasPos, end: canvasPos });
     }
   }, [isSpacePressed, activeTool]);
 
@@ -203,6 +238,11 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     const pos = stage.getPointerPosition();
     if (!pos) return;
 
+    const canvasPos = {
+      x: (pos.x - stage.x()) / stage.scaleX(),
+      y: (pos.y - stage.y()) / stage.scaleY()
+    };
+
     if (isDragging && dragStart) {
       const dx = pos.x - dragStart.x;
       const dy = pos.y - dragStart.y;
@@ -211,10 +251,15 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
-    if (selectionBox) {
-      setSelectionBox(prev => prev ? { ...prev, end: pos } : null);
+    if (isDrawing && activeTool?.id === 'pen') {
+      setCurrentPath(prev => [...prev, canvasPos.x, canvasPos.y]);
+      return;
     }
-  }, [isDragging, dragStart, selectionBox, pan]);
+
+    if (selectionBox) {
+      setSelectionBox(prev => prev ? { ...prev, end: canvasPos } : null);
+    }
+  }, [isDragging, dragStart, selectionBox, isDrawing, activeTool, pan]);
 
   // Handle stage mouse up
   const handleStageMouseUp = useCallback(() => {
@@ -224,6 +269,29 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     setIsDragging(false);
     setDragStart(null);
     stage.container().style.cursor = activeTool?.cursor || 'default';
+
+    if (isDrawing && currentPath.length > 2) {
+      // Create a drawing object
+      addObject({
+        type: 'line',
+        position: { x: 0, y: 0 },
+        size: { width: 0, height: 0 },
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        style: {
+          stroke: currentColor,
+          strokeWidth: currentStrokeWidth,
+          fill: 'transparent'
+        },
+        layer: 0,
+        author: currentUser?.id || 'anonymous',
+        metadata: { 
+          points: currentPath,
+          isDrawing: true
+        }
+      });
+      setCurrentPath([]);
+      setIsDrawing(false);
+    }
 
     if (selectionBox) {
       // Select objects within selection box
@@ -254,7 +322,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       selectObjects(selectedObjects.map(obj => obj.id));
       setSelectionBox(null);
     }
-  }, [activeTool, selectionBox, canvasState.objects, selectObjects]);
+  }, [activeTool, selectionBox, canvasState.objects, selectObjects, isDrawing, currentPath, addObject, currentColor, currentStrokeWidth, currentUser]);
 
   // Handle context menu
   const handleContextMenu = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -313,15 +381,15 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       size: { width: 150, height: 100 },
       transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
       style: {
-        fill: '#3B82F6',
-        stroke: '#1E40AF',
-        strokeWidth: 2
+        fill: currentColor,
+        stroke: currentColor,
+        strokeWidth: currentStrokeWidth
       },
       layer: 0,
       author: currentUser?.id || 'anonymous',
       metadata: { shapeType: 'rectangle' }
     });
-  }, [addObject, currentUser]);
+  }, [addObject, currentUser, currentColor, currentStrokeWidth]);
 
   const addCircle = useCallback((position: Point) => {
     addObject({
@@ -330,35 +398,52 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       size: { width: 120, height: 120 },
       transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
       style: {
-        fill: '#10B981',
-        stroke: '#047857',
-        strokeWidth: 2
+        fill: currentColor,
+        stroke: currentColor,
+        strokeWidth: currentStrokeWidth
       },
       layer: 0,
       author: currentUser?.id || 'anonymous',
       metadata: { shapeType: 'circle' }
     });
-  }, [addObject, currentUser]);
+  }, [addObject, currentUser, currentColor, currentStrokeWidth]);
 
-  const startDrawingLine = useCallback((position: Point) => {
-    // For now, create a simple line
+  const addLine = useCallback((position: Point) => {
     addObject({
       type: 'line',
       position,
       size: { width: 100, height: 0 },
       transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
       style: {
-        stroke: '#000000',
-        strokeWidth: 2
+        stroke: currentColor,
+        strokeWidth: currentStrokeWidth
       },
       layer: 0,
       author: currentUser?.id || 'anonymous',
       metadata: { 
-        startPoint: position,
-        endPoint: { x: position.x + 100, y: position.y }
+        points: [0, 0, 100, 0]
       }
     });
-  }, [addObject, currentUser]);
+  }, [addObject, currentUser, currentColor, currentStrokeWidth]);
+
+  const addArrow = useCallback((position: Point) => {
+    addObject({
+      type: 'arrow',
+      position,
+      size: { width: 100, height: 0 },
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      style: {
+        stroke: currentColor,
+        strokeWidth: currentStrokeWidth,
+        fill: currentColor
+      },
+      layer: 0,
+      author: currentUser?.id || 'anonymous',
+      metadata: { 
+        points: [0, 0, 100, 0]
+      }
+    });
+  }, [addObject, currentUser, currentColor, currentStrokeWidth]);
 
   // Update transformer when selection changes
   useEffect(() => {
@@ -381,59 +466,187 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       const key = obj.id;
       const isSelected = canvasState.selectedIds.includes(obj.id);
 
+      const handleObjectClick = () => {
+        selectObjects([obj.id]);
+      };
+
+      const handleDragEnd = (e: any) => {
+        updateObject(obj.id, {
+          position: { x: e.target.x(), y: e.target.y() }
+        });
+      };
+
+      const handleTransformEnd = (e: any) => {
+        const node = e.target;
+        const scaleX = node.scaleX();
+        const scaleY = node.scaleY();
+
+        node.scaleX(1);
+        node.scaleY(1);
+
+        updateObject(obj.id, {
+          size: {
+            width: Math.max(5, node.width() * scaleX),
+            height: Math.max(5, node.height() * scaleY)
+          },
+          transform: {
+            ...obj.transform,
+            rotation: node.rotation()
+          }
+        });
+      };
+
       switch (obj.type) {
         case 'sticky':
           return (
-            <StickyNoteComponent
+            <Group
               key={key}
-              object={obj}
-              isSelected={isSelected}
-              onUpdate={updateObject}
-              onSelect={() => selectObjects([obj.id])}
-            />
+              id={obj.id}
+              x={obj.position.x}
+              y={obj.position.y}
+              rotation={obj.transform.rotation}
+              draggable
+              onClick={handleObjectClick}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+            >
+              <Rect
+                width={obj.size.width}
+                height={obj.size.height}
+                fill={obj.style.fill || '#FFE066'}
+                stroke={obj.style.stroke || '#E6CC00'}
+                strokeWidth={obj.style.strokeWidth || 1}
+                cornerRadius={8}
+                shadowColor="rgba(0,0,0,0.2)"
+                shadowBlur={isSelected ? 10 : 5}
+                shadowOffset={{ x: 2, y: 2 }}
+                shadowOpacity={0.3}
+              />
+              <Text
+                text={obj.content || 'Double-click to edit'}
+                x={10}
+                y={10}
+                width={obj.size.width - 20}
+                height={obj.size.height - 20}
+                fontSize={obj.style.fontSize || 14}
+                fontFamily={obj.style.fontFamily || 'Arial'}
+                fill={obj.style.textColor || '#000000'}
+                align={obj.style.textAlign || 'left'}
+                verticalAlign="top"
+                wrap="word"
+              />
+            </Group>
           );
+
         case 'text':
           return (
-            <TextBoxComponent
+            <Group
               key={key}
-              object={obj}
-              isSelected={isSelected}
-              onUpdate={updateObject}
-              onSelect={() => selectObjects([obj.id])}
-            />
+              id={obj.id}
+              x={obj.position.x}
+              y={obj.position.y}
+              rotation={obj.transform.rotation}
+              draggable
+              onClick={handleObjectClick}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+            >
+              <Text
+                text={obj.content || 'Type here...'}
+                width={obj.size.width}
+                height={obj.size.height}
+                fontSize={obj.style.fontSize || 16}
+                fontFamily={obj.style.fontFamily || 'Arial'}
+                fontStyle={obj.style.fontWeight || 'normal'}
+                fill={obj.style.fill || '#000000'}
+                align={obj.style.textAlign || 'left'}
+                verticalAlign="top"
+                wrap="word"
+              />
+            </Group>
           );
+
         case 'shape':
+          const shapeType = obj.metadata?.shapeType || 'rectangle';
           return (
-            <ShapeComponent
+            <Group
               key={key}
-              object={obj}
-              isSelected={isSelected}
-              onUpdate={updateObject}
-              onSelect={() => selectObjects([obj.id])}
-            />
+              id={obj.id}
+              x={obj.position.x}
+              y={obj.position.y}
+              rotation={obj.transform.rotation}
+              draggable
+              onClick={handleObjectClick}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+            >
+              {shapeType === 'circle' ? (
+                <Circle
+                  x={obj.size.width / 2}
+                  y={obj.size.height / 2}
+                  radius={Math.min(obj.size.width, obj.size.height) / 2}
+                  fill={obj.style.fill || '#3B82F6'}
+                  stroke={obj.style.stroke || '#1E40AF'}
+                  strokeWidth={obj.style.strokeWidth || 2}
+                  opacity={obj.style.opacity || 1}
+                />
+              ) : (
+                <Rect
+                  width={obj.size.width}
+                  height={obj.size.height}
+                  fill={obj.style.fill || '#3B82F6'}
+                  stroke={obj.style.stroke || '#1E40AF'}
+                  strokeWidth={obj.style.strokeWidth || 2}
+                  cornerRadius={obj.style.borderRadius || 0}
+                  opacity={obj.style.opacity || 1}
+                />
+              )}
+            </Group>
           );
+
         case 'line':
+          const points = obj.metadata?.points || [0, 0, 100, 0];
+          return (
+            <Line
+              key={key}
+              id={obj.id}
+              x={obj.position.x}
+              y={obj.position.y}
+              points={points}
+              stroke={obj.style.stroke || '#000000'}
+              strokeWidth={obj.style.strokeWidth || 2}
+              lineCap="round"
+              lineJoin="round"
+              opacity={obj.style.opacity || 1}
+              draggable
+              onClick={handleObjectClick}
+              onDragEnd={handleDragEnd}
+            />
+          );
+
         case 'arrow':
-        case 'connector':
+          const arrowPoints = obj.metadata?.points || [0, 0, 100, 0];
           return (
-            <LineComponent
+            <Arrow
               key={key}
-              object={obj}
-              isSelected={isSelected}
-              onUpdate={updateObject}
-              onSelect={() => selectObjects([obj.id])}
+              id={obj.id}
+              x={obj.position.x}
+              y={obj.position.y}
+              points={arrowPoints}
+              stroke={obj.style.stroke || '#000000'}
+              strokeWidth={obj.style.strokeWidth || 2}
+              fill={obj.style.fill || obj.style.stroke || '#000000'}
+              pointerLength={10}
+              pointerWidth={8}
+              lineCap="round"
+              lineJoin="round"
+              opacity={obj.style.opacity || 1}
+              draggable
+              onClick={handleObjectClick}
+              onDragEnd={handleDragEnd}
             />
           );
-        case 'frame':
-          return (
-            <FrameComponent
-              key={key}
-              object={obj}
-              isSelected={isSelected}
-              onUpdate={updateObject}
-              onSelect={() => selectObjects([obj.id])}
-            />
-          );
+
         default:
           return null;
       }
@@ -454,6 +667,10 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         onToggleLayers={() => setShowLayers(!showLayers)}
         onToggleProperties={() => setShowProperties(!showProperties)}
         onToggleComments={() => setShowComments(!showComments)}
+        currentColor={currentColor}
+        onColorChange={setCurrentColor}
+        currentStrokeWidth={currentStrokeWidth}
+        onStrokeWidthChange={setCurrentStrokeWidth}
       />
 
       {/* Main Canvas */}
@@ -491,11 +708,29 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
             {/* Canvas Objects */}
             {renderObjects()}
 
+            {/* Current Drawing Path */}
+            {isDrawing && currentPath.length > 2 && (
+              <Line
+                points={currentPath}
+                stroke={currentColor}
+                strokeWidth={currentStrokeWidth}
+                lineCap="round"
+                lineJoin="round"
+                globalCompositeOperation="source-over"
+              />
+            )}
+
             {/* Selection Box */}
             {selectionBox && (
-              <SelectionBox
-                start={selectionBox.start}
-                end={selectionBox.end}
+              <Rect
+                x={Math.min(selectionBox.start.x, selectionBox.end.x)}
+                y={Math.min(selectionBox.start.y, selectionBox.end.y)}
+                width={Math.abs(selectionBox.end.x - selectionBox.start.x)}
+                height={Math.abs(selectionBox.end.y - selectionBox.start.y)}
+                fill="rgba(59, 130, 246, 0.1)"
+                stroke="#3B82F6"
+                strokeWidth={1}
+                dash={[5, 5]}
               />
             )}
 
@@ -503,7 +738,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
             <Transformer
               ref={transformerRef}
               boundBoxFunc={(oldBox, newBox) => {
-                // Limit resize
                 if (newBox.width < 5 || newBox.height < 5) {
                   return oldBox;
                 }

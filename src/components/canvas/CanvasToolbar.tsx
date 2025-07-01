@@ -50,6 +50,10 @@ interface CanvasToolbarProps {
   onToggleLayers: () => void;
   onToggleProperties: () => void;
   onToggleComments: () => void;
+  currentColor: string;
+  onColorChange: (color: string) => void;
+  currentStrokeWidth: number;
+  onStrokeWidthChange: (width: number) => void;
 }
 
 export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
@@ -62,7 +66,11 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   onToggleMiniMap,
   onToggleLayers,
   onToggleProperties,
-  onToggleComments
+  onToggleComments,
+  currentColor,
+  onColorChange,
+  currentStrokeWidth,
+  onStrokeWidthChange
 }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showShapeMenu, setShowShapeMenu] = useState(false);
@@ -235,10 +243,14 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowColorPicker(!showColorPicker)}
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1"
               title="Colors"
             >
-              <Palette className="w-5 h-5" />
+              <div 
+                className="w-4 h-4 rounded border border-gray-300"
+                style={{ backgroundColor: currentColor }}
+              />
+              <Palette className="w-4 h-4" />
             </motion.button>
 
             <AnimatePresence>
@@ -249,20 +261,39 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                   exit={{ opacity: 0, y: 10 }}
                   className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50"
                 >
-                  <div className="grid grid-cols-6 gap-2 w-48">
+                  <div className="grid grid-cols-6 gap-2 w-48 mb-3">
                     {colors.map((color) => (
                       <motion.button
                         key={color}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
-                        className="w-6 h-6 rounded border-2 border-gray-300 hover:border-gray-400 transition-colors"
+                        className={`w-6 h-6 rounded border-2 transition-all ${
+                          currentColor === color
+                            ? 'border-blue-500 scale-110'
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
                         style={{ backgroundColor: color }}
                         onClick={() => {
-                          // Handle color selection
+                          onColorChange(color);
                           setShowColorPicker(false);
                         }}
                       />
                     ))}
+                  </div>
+                  
+                  {/* Stroke Width */}
+                  <div className="border-t pt-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-2">
+                      Stroke Width: {currentStrokeWidth}px
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="20"
+                      value={currentStrokeWidth}
+                      onChange={(e) => onStrokeWidthChange(parseInt(e.target.value))}
+                      className="w-full"
+                    />
                   </div>
                 </motion.div>
               )}
