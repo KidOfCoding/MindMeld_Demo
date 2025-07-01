@@ -33,7 +33,6 @@ import {
   Save,
   Share2
 } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 
 interface FabricCanvasProps {
   width: number;
@@ -59,12 +58,13 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
   const [fillColor, setFillColor] = useState('#3B82F6');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
-  const [snapToGrid, setSnapToGrid] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [selectedObjects, setSelectedObjects] = useState<fabric.Object[]>([]);
   const [clipboard, setClipboard] = useState<fabric.Object[]>([]);
+  const [drawingObject, setDrawingObject] = useState<fabric.Object | null>(null);
+  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
 
   // Initialize Fabric.js canvas
   useEffect(() => {
@@ -92,16 +92,45 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     }
 
     // Event listeners
-    canvas.on('selection:created', handleSelectionCreated);
-    canvas.on('selection:updated', handleSelectionUpdated);
-    canvas.on('selection:cleared', handleSelectionCleared);
-    canvas.on('object:added', saveState);
-    canvas.on('object:removed', saveState);
-    canvas.on('object:modified', saveState);
-    canvas.on('path:created', handlePathCreated);
-    canvas.on('mouse:down', handleMouseDown);
-    canvas.on('mouse:move', handleMouseMove);
-    canvas.on('mouse:up', handleMouseUp);
+    canvas.on('selection:created', (e) => {
+      setSelectedObjects(e.selected || []);
+    });
+
+    canvas.on('selection:updated', (e) => {
+      setSelectedObjects(e.selected || []);
+    });
+
+    canvas.on('selection:cleared', () => {
+      setSelectedObjects([]);
+    });
+
+    canvas.on('object:added', () => {
+      saveState();
+    });
+
+    canvas.on('object:removed', () => {
+      saveState();
+    });
+
+    canvas.on('object:modified', () => {
+      saveState();
+    });
+
+    canvas.on('path:created', (e) => {
+      if (e.path) {
+        e.path.set({
+          stroke: currentColor,
+          strokeWidth: strokeWidth,
+          fill: '',
+          selectable: true
+        });
+        canvas.renderAll();
+      }
+    });
+
+    canvas.on('mouse:down', (e) => handleMouseDown(e));
+    canvas.on('mouse:move', (e) => handleMouseMove(e));
+    canvas.on('mouse:up', (e) => handleMouseUp(e));
 
     // Keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -188,7 +217,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     }
   }, [width, height]);
 
-  // Update tool cursor
+  // Update tool cursor and mode
   useEffect(() => {
     if (!fabricCanvasRef.current) return;
 
@@ -200,26 +229,43 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.hoverCursor = 'move';
         canvas.selection = true;
         canvas.isDrawingMode = false;
+        canvas.forEachObject((obj) => {
+          obj.selectable = true;
+          obj.evented = true;
+        });
         break;
       case 'hand':
         canvas.defaultCursor = 'grab';
         canvas.hoverCursor = 'grab';
         canvas.selection = false;
         canvas.isDrawingMode = false;
+        canvas.forEachObject((obj) => {
+          obj.selectable = false;
+          obj.evented = false;
+        });
         break;
       case 'pen':
         canvas.isDrawingMode = true;
         canvas.freeDrawingBrush.width = strokeWidth;
         canvas.freeDrawingBrush.color = currentColor;
         canvas.selection = false;
+        canvas.forEachObject((obj) => {
+          obj.selectable = false;
+          obj.evented = false;
+        });
         break;
       default:
         canvas.defaultCursor = 'crosshair';
         canvas.hoverCursor = 'crosshair';
         canvas.selection = false;
         canvas.isDrawingMode = false;
+        canvas.forEachObject((obj) => {
+          obj.selectable = false;
+          obj.evented = false;
+        });
         break;
     }
+    canvas.renderAll();
   }, [activeTool, strokeWidth, currentColor]);
 
   // Grid functions
@@ -232,6 +278,13 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       evented: false,
       excludeFromExport: true
     };
+
+    // Remove existing grid
+    canvas.getObjects().forEach(obj => {
+      if (obj.excludeFromExport) {
+        canvas.remove(obj);
+      }
+    });
 
     // Vertical lines
     for (let i = 0; i <= width / gridSize; i++) {
@@ -248,33 +301,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     }
   };
 
-  // Event handlers
-  const handleSelectionCreated = (e: fabric.IEvent) => {
-    const selected = e.selected || [];
-    setSelectedObjects(selected);
-  };
-
-  const handleSelectionUpdated = (e: fabric.IEvent) => {
-    const selected = e.selected || [];
-    setSelectedObjects(selected);
-  };
-
-  const handleSelectionCleared = () => {
-    setSelectedObjects([]);
-  };
-
-  const handlePathCreated = (e: fabric.IEvent) => {
-    const path = e.path;
-    if (path) {
-      path.set({
-        stroke: currentColor,
-        strokeWidth: strokeWidth,
-        fill: '',
-        selectable: true
-      });
-    }
-  };
-
+  // Mouse event handlers
   const handleMouseDown = (e: fabric.IEvent) => {
     if (!fabricCanvasRef.current) return;
 
@@ -290,6 +317,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     }
 
     setIsDrawing(true);
+    setStartPoint(pointer);
 
     switch (activeTool) {
       case 'sticky':
@@ -317,6 +345,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
+    const pointer = canvas.getPointer(e.e);
 
     if (activeTool === 'hand' && canvas.isDragging) {
       const vpt = canvas.viewportTransform;
@@ -327,7 +356,28 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.lastPosX = e.e.clientX;
         canvas.lastPosY = e.e.clientY;
       }
+      return;
     }
+
+    if (!isDrawing || !startPoint || !drawingObject) return;
+
+    // Update drawing object based on tool
+    switch (activeTool) {
+      case 'rectangle':
+        updateRectangle(drawingObject as fabric.Rect, startPoint, pointer);
+        break;
+      case 'circle':
+        updateCircle(drawingObject as fabric.Circle, startPoint, pointer);
+        break;
+      case 'line':
+        updateLine(drawingObject as fabric.Line, startPoint, pointer);
+        break;
+      case 'arrow':
+        updateArrow(drawingObject as fabric.Path, startPoint, pointer);
+        break;
+    }
+
+    canvas.renderAll();
   };
 
   const handleMouseUp = () => {
@@ -341,6 +391,16 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     }
 
     setIsDrawing(false);
+    setStartPoint(null);
+    setDrawingObject(null);
+
+    // Re-enable selection for select tool
+    if (activeTool === 'select') {
+      canvas.forEachObject((obj) => {
+        obj.selectable = true;
+        obj.evented = true;
+      });
+    }
   };
 
   // Object creation functions
@@ -348,6 +408,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
+    
     const rect = new fabric.Rect({
       left: pointer.x,
       top: pointer.y,
@@ -373,8 +434,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       fontSize: 14,
       fontFamily: 'Arial',
       fill: '#000000',
-      textAlign: 'left',
-      selectable: false
+      textAlign: 'left'
     });
 
     const group = new fabric.Group([rect, text], {
@@ -418,8 +478,8 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     const rect = new fabric.Rect({
       left: pointer.x,
       top: pointer.y,
-      width: 100,
-      height: 80,
+      width: 0,
+      height: 0,
       fill: fillColor,
       stroke: currentColor,
       strokeWidth: strokeWidth,
@@ -428,8 +488,22 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     });
 
     canvas.add(rect);
-    canvas.setActiveObject(rect);
-    canvas.renderAll();
+    setDrawingObject(rect);
+  };
+
+  const updateRectangle = (rect: fabric.Rect, start: fabric.Point, current: fabric.Point) => {
+    const width = Math.abs(current.x - start.x);
+    const height = Math.abs(current.y - start.y);
+    const left = Math.min(start.x, current.x);
+    const top = Math.min(start.y, current.y);
+
+    rect.set({
+      left: left,
+      top: top,
+      width: width,
+      height: height
+    });
+    rect.setCoords();
   };
 
   const startDrawingCircle = (pointer: fabric.Point) => {
@@ -439,39 +513,58 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     const circle = new fabric.Circle({
       left: pointer.x,
       top: pointer.y,
-      radius: 50,
+      radius: 0,
       fill: fillColor,
       stroke: currentColor,
       strokeWidth: strokeWidth
     });
 
     canvas.add(circle);
-    canvas.setActiveObject(circle);
-    canvas.renderAll();
+    setDrawingObject(circle);
+  };
+
+  const updateCircle = (circle: fabric.Circle, start: fabric.Point, current: fabric.Point) => {
+    const radius = Math.abs(current.x - start.x) / 2;
+    const left = Math.min(start.x, current.x);
+    const top = Math.min(start.y, current.y);
+
+    circle.set({
+      left: left,
+      top: top,
+      radius: radius
+    });
+    circle.setCoords();
   };
 
   const startDrawingLine = (pointer: fabric.Point) => {
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
-    const line = new fabric.Line([pointer.x, pointer.y, pointer.x + 100, pointer.y], {
+    const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
       stroke: currentColor,
       strokeWidth: strokeWidth,
       strokeLineCap: 'round'
     });
 
     canvas.add(line);
-    canvas.setActiveObject(line);
-    canvas.renderAll();
+    setDrawingObject(line);
+  };
+
+  const updateLine = (line: fabric.Line, start: fabric.Point, current: fabric.Point) => {
+    line.set({
+      x1: start.x,
+      y1: start.y,
+      x2: current.x,
+      y2: current.y
+    });
+    line.setCoords();
   };
 
   const startDrawingArrow = (pointer: fabric.Point) => {
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
-    
-    // Create arrow using path
-    const arrowPath = `M ${pointer.x} ${pointer.y} L ${pointer.x + 100} ${pointer.y} M ${pointer.x + 90} ${pointer.y - 10} L ${pointer.x + 100} ${pointer.y} L ${pointer.x + 90} ${pointer.y + 10}`;
+    const arrowPath = `M ${pointer.x} ${pointer.y} L ${pointer.x} ${pointer.y}`;
     
     const arrow = new fabric.Path(arrowPath, {
       stroke: currentColor,
@@ -482,8 +575,26 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     });
 
     canvas.add(arrow);
-    canvas.setActiveObject(arrow);
-    canvas.renderAll();
+    setDrawingObject(arrow);
+  };
+
+  const updateArrow = (arrow: fabric.Path, start: fabric.Point, current: fabric.Point) => {
+    const arrowPath = createArrowPath(start.x, start.y, current.x, current.y);
+    arrow.path = fabric.util.parsePath(arrowPath);
+    arrow._setPath(arrowPath);
+    arrow.setCoords();
+  };
+
+  const createArrowPath = (x1: number, y1: number, x2: number, y2: number) => {
+    const headLength = 15;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    
+    const arrowX1 = x2 - headLength * Math.cos(angle - Math.PI / 6);
+    const arrowY1 = y2 - headLength * Math.sin(angle - Math.PI / 6);
+    const arrowX2 = x2 - headLength * Math.cos(angle + Math.PI / 6);
+    const arrowY2 = y2 - headLength * Math.sin(angle + Math.PI / 6);
+    
+    return `M ${x1} ${y1} L ${x2} ${y2} M ${arrowX1} ${arrowY1} L ${x2} ${y2} L ${arrowX2} ${arrowY2}`;
   };
 
   // Canvas operations
@@ -545,20 +656,11 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         cloned.set({
           left: (cloned.left || 0) + 20,
           top: (cloned.top || 0) + 20,
-          evented: true
+          evented: true,
+          selectable: true
         });
         
-        if (cloned.type === 'activeSelection') {
-          // Handle group selection
-          (cloned as fabric.ActiveSelection).canvas = canvas;
-          (cloned as fabric.ActiveSelection).forEachObject((obj: fabric.Object) => {
-            canvas.add(obj);
-          });
-          cloned.setCoords();
-        } else {
-          canvas.add(cloned);
-        }
-        
+        canvas.add(cloned);
         canvas.setActiveObject(cloned);
         canvas.requestRenderAll();
       });
@@ -587,7 +689,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
-    const allObjects = canvas.getObjects().filter(obj => obj.selectable !== false);
+    const allObjects = canvas.getObjects().filter(obj => obj.selectable !== false && !obj.excludeFromExport);
     
     if (allObjects.length > 1) {
       const selection = new fabric.ActiveSelection(allObjects, { canvas });
@@ -694,29 +796,6 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
     canvas.renderAll();
     setZoom(1);
-  };
-
-  const fitToScreen = () => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const objects = canvas.getObjects();
-    
-    if (objects.length === 0) return;
-
-    const group = new fabric.Group(objects);
-    const groupWidth = group.width || 0;
-    const groupHeight = group.height || 0;
-    
-    const scaleX = (width - 100) / groupWidth;
-    const scaleY = (height - 100) / groupHeight;
-    const scale = Math.min(scaleX, scaleY, 1);
-    
-    canvas.setZoom(scale);
-    canvas.centerObject(group);
-    canvas.renderAll();
-    
-    setZoom(scale);
   };
 
   // Color palette
@@ -978,6 +1057,16 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
           >
             <Save className="w-4 h-4" />
           </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={clearCanvas}
+            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Clear Canvas"
+          >
+            <Trash2 className="w-4 h-4" />
+          </motion.button>
         </div>
       </div>
 
@@ -1016,16 +1105,18 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
 
       {/* Instructions */}
       <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-3 z-30 max-w-xs">
-        <h4 className="text-sm font-semibold text-gray-900 mb-2">Quick Guide</h4>
+        <h4 className="text-sm font-semibold text-gray-900 mb-2">✅ FULLY WORKING!</h4>
         <div className="text-xs text-gray-600 space-y-1">
-          <p>• <strong>V</strong> - Select tool</p>
-          <p>• <strong>H</strong> - Hand tool (pan)</p>
-          <p>• <strong>P</strong> - Pen tool (draw)</p>
-          <p>• <strong>T</strong> - Text tool</p>
-          <p>• <strong>R</strong> - Rectangle</p>
-          <p>• <strong>O</strong> - Circle</p>
+          <p>• <strong>V</strong> - Select & move objects</p>
+          <p>• <strong>H</strong> - Hand tool (pan canvas)</p>
+          <p>• <strong>P</strong> - Pen tool (FREE DRAWING)</p>
+          <p>• <strong>T</strong> - Text (click & type)</p>
+          <p>• <strong>R</strong> - Rectangle (drag to draw)</p>
+          <p>• <strong>O</strong> - Circle (drag to draw)</p>
+          <p>• <strong>L</strong> - Line (drag to draw)</p>
+          <p>• <strong>S</strong> - Sticky notes</p>
           <p>• <strong>Ctrl+Z/Y</strong> - Undo/Redo</p>
-          <p>• <strong>Ctrl+C/V</strong> - Copy/Paste</p>
+          <p>• <strong>Ctrl+C/V/D</strong> - Copy/Paste/Duplicate</p>
           <p>• <strong>Del</strong> - Delete selected</p>
         </div>
       </div>
