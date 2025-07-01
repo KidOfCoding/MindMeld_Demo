@@ -1,20 +1,34 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  optimizeDeps: {
-    include: ['lucide-react'],
-  },
   server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
     fs: {
       strict: false
     }
   },
+  optimizeDeps: {
+    include: ['lucide-react', 'react', 'react-dom', 'framer-motion'],
+    force: true
+  },
   build: {
-    commonjsOptions: {
-      include: [/lucide-react/, /node_modules/]
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          icons: ['lucide-react']
+        }
+      }
+    }
+  },
+  resolve: {
+    alias: {
+      '@': '/src'
     }
   }
 });
