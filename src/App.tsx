@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
-import { MiroCanvas } from './components/canvas/MiroCanvas';
+import { FabricCanvas } from './components/canvas/FabricCanvas';
 import { AIInsightPanel } from './components/ai/AIInsightPanel';
 import { CollaboratorPanel } from './components/collaboration/CollaboratorPanel';
 import { StatusBar } from './components/layout/StatusBar';
@@ -193,7 +193,7 @@ function App() {
         
         {/* Main Canvas Area */}
         <div className="flex-1 relative">
-          <MiroCanvas
+          <FabricCanvas
             width={canvasWidth}
             height={canvasHeight}
             collaborators={collaborators}
