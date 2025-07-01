@@ -47,7 +47,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
   collaborators = [],
   currentUser
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
   
   // State
@@ -598,9 +598,15 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
 
   // Initialize Fabric.js canvas - only once on mount
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasContainerRef.current) return;
 
-    const canvas = new fabric.Canvas(canvasRef.current, {
+    // Create a canvas element for Fabric.js to use
+    const canvasElement = document.createElement('canvas');
+    canvasElement.width = width;
+    canvasElement.height = height;
+    canvasContainerRef.current.appendChild(canvasElement);
+
+    const canvas = new fabric.Canvas(canvasElement, {
       width: width,
       height: height,
       backgroundColor: '#ffffff',
@@ -736,6 +742,10 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       canvas.dispose();
+      // Clean up the canvas element
+      if (canvasContainerRef.current && canvasElement.parentNode) {
+        canvasContainerRef.current.removeChild(canvasElement);
+      }
     };
   }, []); // Only initialize once
 
@@ -1105,9 +1115,9 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         </div>
       )}
 
-      {/* Canvas */}
-      <canvas
-        ref={canvasRef}
+      {/* Canvas Container */}
+      <div
+        ref={canvasContainerRef}
         className="border border-gray-300 bg-white"
         style={{ 
           width: width, 
