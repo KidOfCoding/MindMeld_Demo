@@ -258,7 +258,9 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     const currentStepData = demoSteps[currentStep];
     if (!currentStepData) {
       setIsPlaying(false);
-      onDemoComplete?.();
+      if (onDemoComplete) {
+        setTimeout(() => onDemoComplete(), 100);
+      }
       return;
     }
 
@@ -284,7 +286,9 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             return 0;
           } else {
             setIsPlaying(false);
-            onDemoComplete?.();
+            if (onDemoComplete) {
+              setTimeout(() => onDemoComplete(), 100);
+            }
             return 100;
           }
         }
@@ -398,36 +402,43 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         const center = getCanvasCenter();
         
         if (action.target === 'create-strategy-diagram') {
-          // Create Product Strategy Diagram
+          // Create Product Strategy Diagram with connections
           const strategyShapes = [
-            { id: 'strategy-1', type: 'rectangle', position: { x: center.x - 200, y: center.y - 100 }, text: 'Market Analysis', color: '#3B82F6' },
-            { id: 'strategy-2', type: 'rectangle', position: { x: center.x, y: center.y - 100 }, text: 'User Research', color: '#10B981' },
-            { id: 'strategy-3', type: 'rectangle', position: { x: center.x + 200, y: center.y - 100 }, text: 'Competitive Analysis', color: '#F59E0B' },
-            { id: 'strategy-4', type: 'rectangle', position: { x: center.x - 200, y: center.y + 50 }, text: 'Product Vision', color: '#EF4444' },
-            { id: 'strategy-5', type: 'rectangle', position: { x: center.x, y: center.y + 50 }, text: 'Roadmap Planning', color: '#8B5CF6' },
-            { id: 'strategy-6', type: 'rectangle', position: { x: center.x + 200, y: center.y + 50 }, text: 'Success Metrics', color: '#06B6D4' },
-            // Connecting lines
-            { id: 'line-1', type: 'line', startPos: { x: center.x - 100, y: center.y - 80 }, endPos: { x: center.x - 100, y: center.y - 80 }, color: '#6B7280' },
-            { id: 'line-2', type: 'line', startPos: { x: center.x + 100, y: center.y - 80 }, endPos: { x: center.x + 100, y: center.y + 30 }, color: '#6B7280' }
+            // Main boxes
+            { id: 'strategy-1', type: 'rectangle', position: { x: center.x - 200, y: center.y - 100 }, text: 'Market Analysis', color: '#3B82F6', width: 120, height: 60 },
+            { id: 'strategy-2', type: 'rectangle', position: { x: center.x - 50, y: center.y - 100 }, text: 'User Research', color: '#10B981', width: 120, height: 60 },
+            { id: 'strategy-3', type: 'rectangle', position: { x: center.x + 100, y: center.y - 100 }, text: 'Competitive Analysis', color: '#F59E0B', width: 120, height: 60 },
+            { id: 'strategy-4', type: 'rectangle', position: { x: center.x - 200, y: center.y + 50 }, text: 'Product Vision', color: '#EF4444', width: 120, height: 60 },
+            { id: 'strategy-5', type: 'rectangle', position: { x: center.x - 50, y: center.y + 50 }, text: 'Roadmap Planning', color: '#8B5CF6', width: 120, height: 60 },
+            { id: 'strategy-6', type: 'rectangle', position: { x: center.x + 100, y: center.y + 50 }, text: 'Success Metrics', color: '#06B6D4', width: 120, height: 60 },
+            // Horizontal connections
+            { id: 'line-h1', type: 'line', startPos: { x: center.x - 80, y: center.y - 70 }, endPos: { x: center.x - 50, y: center.y - 70 }, color: '#6B7280' },
+            { id: 'line-h2', type: 'line', startPos: { x: center.x + 70, y: center.y - 70 }, endPos: { x: center.x + 100, y: center.y - 70 }, color: '#6B7280' },
+            { id: 'line-h3', type: 'line', startPos: { x: center.x - 80, y: center.y + 80 }, endPos: { x: center.x - 50, y: center.y + 80 }, color: '#6B7280' },
+            { id: 'line-h4', type: 'line', startPos: { x: center.x + 70, y: center.y + 80 }, endPos: { x: center.x + 100, y: center.y + 80 }, color: '#6B7280' },
+            // Vertical connections
+            { id: 'line-v1', type: 'line', startPos: { x: center.x - 140, y: center.y - 40 }, endPos: { x: center.x - 140, y: center.y + 50 }, color: '#6B7280' },
+            { id: 'line-v2', type: 'line', startPos: { x: center.x + 10, y: center.y - 40 }, endPos: { x: center.x + 10, y: center.y + 50 }, color: '#6B7280' },
+            { id: 'line-v3', type: 'line', startPos: { x: center.x + 160, y: center.y - 40 }, endPos: { x: center.x + 160, y: center.y + 50 }, color: '#6B7280' }
           ];
           setCanvasShapes(strategyShapes);
         } else if (action.target === 'create-innovation-diagram') {
-          // Clear previous diagram and create AI Innovation Hub
+          // Clear previous diagram and create AI Innovation Hub with connections
           setCanvasShapes([]);
           setTimeout(() => {
             const innovationShapes = [
               // Central AI Hub
-              { id: 'ai-hub', type: 'circle', position: { x: center.x - 50, y: center.y - 50 }, text: 'AI Core', color: '#8B5CF6', size: 100 },
+              { id: 'ai-hub', type: 'circle', position: { x: center.x - 50, y: center.y - 50 }, text: 'AI Core', color: '#8B5CF6', width: 100, height: 100 },
               // Surrounding innovation areas
-              { id: 'innovation-1', type: 'rectangle', position: { x: center.x - 250, y: center.y - 150 }, text: 'Machine Learning', color: '#3B82F6' },
-              { id: 'innovation-2', type: 'rectangle', position: { x: center.x + 100, y: center.y - 150 }, text: 'Natural Language', color: '#10B981' },
-              { id: 'innovation-3', type: 'rectangle', position: { x: center.x - 250, y: center.y + 50 }, text: 'Computer Vision', color: '#F59E0B' },
-              { id: 'innovation-4', type: 'rectangle', position: { x: center.x + 100, y: center.y + 50 }, text: 'Predictive Analytics', color: '#EF4444' },
+              { id: 'innovation-1', type: 'rectangle', position: { x: center.x - 250, y: center.y - 150 }, text: 'Machine Learning', color: '#3B82F6', width: 120, height: 60 },
+              { id: 'innovation-2', type: 'rectangle', position: { x: center.x + 100, y: center.y - 150 }, text: 'Natural Language', color: '#10B981', width: 120, height: 60 },
+              { id: 'innovation-3', type: 'rectangle', position: { x: center.x - 250, y: center.y + 50 }, text: 'Computer Vision', color: '#F59E0B', width: 120, height: 60 },
+              { id: 'innovation-4', type: 'rectangle', position: { x: center.x + 100, y: center.y + 50 }, text: 'Predictive Analytics', color: '#EF4444', width: 120, height: 60 },
               // Connection lines to hub
-              { id: 'hub-line-1', type: 'line', startPos: { x: center.x - 150, y: center.y - 100 }, endPos: { x: center.x - 50, y: center.y - 20 }, color: '#8B5CF6' },
-              { id: 'hub-line-2', type: 'line', startPos: { x: center.x + 150, y: center.y - 100 }, endPos: { x: center.x + 50, y: center.y - 20 }, color: '#8B5CF6' },
-              { id: 'hub-line-3', type: 'line', startPos: { x: center.x - 150, y: center.y + 100 }, endPos: { x: center.x - 50, y: center.y + 50 }, color: '#8B5CF6' },
-              { id: 'hub-line-4', type: 'line', startPos: { x: center.x + 150, y: center.y + 100 }, endPos: { x: center.x + 50, y: center.y + 50 }, color: '#8B5CF6' }
+              { id: 'hub-line-1', type: 'line', startPos: { x: center.x - 130, y: center.y - 120 }, endPos: { x: center.x - 30, y: center.y - 30 }, color: '#8B5CF6' },
+              { id: 'hub-line-2', type: 'line', startPos: { x: center.x + 120, y: center.y - 120 }, endPos: { x: center.x + 30, y: center.y - 30 }, color: '#8B5CF6' },
+              { id: 'hub-line-3', type: 'line', startPos: { x: center.x - 130, y: center.y + 80 }, endPos: { x: center.x - 30, y: center.y + 30 }, color: '#8B5CF6' },
+              { id: 'hub-line-4', type: 'line', startPos: { x: center.x + 120, y: center.y + 80 }, endPos: { x: center.x + 30, y: center.y + 30 }, color: '#8B5CF6' }
             ];
             setCanvasShapes(innovationShapes);
           }, 500);
@@ -437,7 +448,9 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             type: 'rectangle',
             position: action.position,
             text: '',
-            color: '#3B82F6'
+            color: '#3B82F6',
+            width: 120,
+            height: 60
           }]);
         } else if (action.target === 'create-circle' && action.position) {
           setCanvasShapes(prev => [...prev, {
@@ -445,7 +458,9 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             type: 'circle',
             position: action.position,
             text: '',
-            color: '#10B981'
+            color: '#10B981',
+            width: 80,
+            height: 80
           }]);
         } else if (action.target === 'create-diamond' && action.position) {
           setCanvasShapes(prev => [...prev, {
@@ -453,23 +468,34 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             type: 'diamond',
             position: action.position,
             text: '',
-            color: '#F59E0B'
+            color: '#F59E0B',
+            width: 80,
+            height: 80
           }]);
         } else if (action.target === 'add-text' && action.text && action.position) {
           setCanvasShapes(prev => prev.map(shape => 
-            shape.position.x === action.position?.x && shape.position.y === action.position?.y
+            shape.position && shape.position.x === action.position?.x && shape.position.y === action.position?.y
               ? { ...shape, text: action.text }
               : shape
           ));
         } else if (action.target === 'connect-shapes') {
-          // Add connecting lines between shapes
-          setCanvasShapes(prev => [...prev, {
-            id: `connector-${Date.now()}`,
-            type: 'line',
-            startPos: { x: 400, y: 250 },
-            endPos: { x: 500, y: 350 },
-            color: '#6B7280'
-          }]);
+          // Add connecting lines between the created shapes
+          setCanvasShapes(prev => [...prev, 
+            {
+              id: `connector-1-${Date.now()}`,
+              type: 'line',
+              startPos: { x: 420, y: 230 },
+              endPos: { x: 500, y: 330 },
+              color: '#6B7280'
+            },
+            {
+              id: `connector-2-${Date.now()}`,
+              type: 'line',
+              startPos: { x: 580, y: 330 },
+              endPos: { x: 700, y: 280 },
+              color: '#6B7280'
+            }
+          ]);
         } else if (action.target === 'finalize-decision') {
           // Highlight the top idea as approved
           setAutoIdeas(prev => prev.map((idea, index) => 
@@ -887,52 +913,59 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         ))}
       </AnimatePresence>
 
-      {/* Canvas Shapes - Professional Diagrams */}
+      {/* Canvas Shapes - Professional Diagrams with Connections */}
       <AnimatePresence>
-        {canvasShapes.map((shape) => (
-          <motion.div
-            key={shape.id}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute pointer-events-none z-[50]"
-            style={{
-              left: shape.position?.x || shape.startPos?.x,
-              top: shape.position?.y || shape.startPos?.y,
-            }}
-          >
-            {shape.type === 'line' ? (
-              <svg width="200" height="150" className="absolute">
-                <line
-                  x1={shape.startPos?.x || 0}
-                  y1={shape.startPos?.y || 0}
-                  x2={shape.endPos?.x || 100}
-                  y2={shape.endPos?.y || 100}
-                  stroke={shape.color}
-                  strokeWidth="2"
-                  className="drop-shadow-sm"
-                />
-              </svg>
-            ) : (
-              <div 
-                className={`flex items-center justify-center text-white text-xs font-medium shadow-lg ${
-                  shape.type === 'rectangle' ? 'w-32 h-16 rounded-lg' :
-                  shape.type === 'circle' ? 'w-20 h-20 rounded-full' :
-                  'w-20 h-12 transform rotate-45 rounded-lg'
-                }`}
-                style={{ 
-                  backgroundColor: shape.color,
-                  width: shape.size || (shape.type === 'circle' ? '80px' : '128px'),
-                  height: shape.size || (shape.type === 'circle' ? '80px' : '64px')
-                }}
-              >
-                <span className={shape.type === 'diamond' ? 'transform -rotate-45' : ''}>
-                  {shape.text}
-                </span>
-              </div>
-            )}
-          </motion.div>
-        ))}
+        {canvasShapes.map((shape) => {
+          // Ensure shape has required properties
+          if (!shape || !shape.id) return null;
+          
+          const position = shape.position || shape.startPos || { x: 0, y: 0 };
+          
+          return (
+            <motion.div
+              key={shape.id}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute pointer-events-none z-[50]"
+              style={{
+                left: position.x,
+                top: position.y,
+              }}
+            >
+              {shape.type === 'line' ? (
+                <svg width="200" height="150" className="absolute" style={{ left: -100, top: -75 }}>
+                  <line
+                    x1={shape.startPos ? 100 : 0}
+                    y1={shape.startPos ? 75 : 0}
+                    x2={shape.endPos ? shape.endPos.x - position.x + 100 : 100}
+                    y2={shape.endPos ? shape.endPos.y - position.y + 75 : 100}
+                    stroke={shape.color}
+                    strokeWidth="2"
+                    className="drop-shadow-sm"
+                  />
+                </svg>
+              ) : (
+                <div 
+                  className={`flex items-center justify-center text-white text-xs font-medium shadow-lg ${
+                    shape.type === 'rectangle' ? 'rounded-lg' :
+                    shape.type === 'circle' ? 'rounded-full' :
+                    'transform rotate-45 rounded-lg'
+                  }`}
+                  style={{ 
+                    backgroundColor: shape.color,
+                    width: shape.width || (shape.type === 'circle' ? '80px' : '120px'),
+                    height: shape.height || (shape.type === 'circle' ? '80px' : '60px')
+                  }}
+                >
+                  <span className={shape.type === 'diamond' ? 'transform -rotate-45' : ''}>
+                    {shape.text}
+                  </span>
+                </div>
+              )}
+            </motion.div>
+          );
+        })}
       </AnimatePresence>
 
       {/* Comments with AI Team Member */}
@@ -1106,7 +1139,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
                 Watch Again
               </button>
               <button
-                onClick={onDemoComplete}
+                onClick={() => onDemoComplete && onDemoComplete()}
                 className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-sm"
               >
                 Get Started
