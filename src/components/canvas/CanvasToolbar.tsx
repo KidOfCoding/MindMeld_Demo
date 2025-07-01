@@ -35,7 +35,11 @@ import {
   Move,
   MoreHorizontal,
   Fullscreen,
-  Map
+  Map,
+  Diamond,
+  Star,
+  GitBranch,
+  ChevronDown
 } from 'lucide-react';
 import { Tool } from '../../types/canvas';
 
@@ -54,6 +58,10 @@ interface CanvasToolbarProps {
   onColorChange: (color: string) => void;
   currentStrokeWidth: number;
   onStrokeWidthChange: (width: number) => void;
+  selectedShapeType?: string;
+  onShapeTypeChange?: (type: string) => void;
+  connectorMode?: string;
+  onConnectorModeChange?: (mode: string) => void;
 }
 
 export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
@@ -70,10 +78,15 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   currentColor,
   onColorChange,
   currentStrokeWidth,
-  onStrokeWidthChange
+  onStrokeWidthChange,
+  selectedShapeType = 'rectangle',
+  onShapeTypeChange,
+  connectorMode = 'none',
+  onConnectorModeChange
 }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showShapeMenu, setShowShapeMenu] = useState(false);
+  const [showConnectorMenu, setShowConnectorMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const tools: Tool[] = [
@@ -84,10 +97,6 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     { id: 'pen', name: 'Pen', icon: Pen, cursor: 'crosshair', category: 'draw' },
     { id: 'line', name: 'Line', icon: Minus, cursor: 'crosshair', category: 'draw' },
     { id: 'arrow', name: 'Arrow', icon: ArrowRight, cursor: 'crosshair', category: 'connector' },
-    { id: 'rectangle', name: 'Rectangle', icon: Square, cursor: 'crosshair', category: 'shape' },
-    { id: 'circle', name: 'Circle', icon: Circle, cursor: 'crosshair', category: 'shape' },
-    { id: 'triangle', name: 'Triangle', icon: Triangle, cursor: 'crosshair', category: 'shape' },
-    { id: 'image', name: 'Image', icon: Image, cursor: 'crosshair', category: 'media' },
     { id: 'eraser', name: 'Eraser', icon: Eraser, cursor: 'crosshair', category: 'draw' }
   ];
 
@@ -95,9 +104,14 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     { id: 'rectangle', name: 'Rectangle', icon: Square },
     { id: 'circle', name: 'Circle', icon: Circle },
     { id: 'triangle', name: 'Triangle', icon: Triangle },
-    { id: 'diamond', name: 'Diamond', icon: Square },
-    { id: 'star', name: 'Star', icon: Square },
-    { id: 'polygon', name: 'Polygon', icon: Square }
+    { id: 'diamond', name: 'Diamond', icon: Diamond },
+    { id: 'star', name: 'Star', icon: Star }
+  ];
+
+  const connectors = [
+    { id: 'straight', name: 'Straight Line', icon: Minus },
+    { id: 'curved', name: 'Curved Line', icon: GitBranch },
+    { id: 'arrow', name: 'Arrow', icon: ArrowRight }
   ];
 
   const colors = [
@@ -107,10 +121,32 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     '#008080', '#4B0082', '#FF1493', '#00CED1', '#FFD700', '#DC143C'
   ];
 
+  const strokeWidths = [1, 2, 3, 4, 5, 8, 10, 12, 16, 20];
+
   const handleToolSelect = (tool: Tool) => {
     onToolChange(tool);
     setShowShapeMenu(false);
+    setShowConnectorMenu(false);
     setShowMoreMenu(false);
+  };
+
+  const handleShapeSelect = (shapeType: string) => {
+    if (onShapeTypeChange) {
+      onShapeTypeChange(shapeType);
+    }
+    handleToolSelect({
+      id: shapeType,
+      name: shapes.find(s => s.id === shapeType)?.name || 'Shape',
+      icon: shapes.find(s => s.id === shapeType)?.icon || Square,
+      cursor: 'crosshair',
+      category: 'shape'
+    });
+    setShowShapeMenu(false);
+  };
+
+  const getCurrentShapeIcon = () => {
+    const currentShape = shapes.find(s => s.id === selectedShapeType);
+    return currentShape ? currentShape.icon : Square;
   };
 
   return (
@@ -143,7 +179,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
 
           {/* Drawing Tools */}
           <div className="flex items-center space-x-1 pr-2 border-r border-gray-200">
-            {tools.slice(2, 7).map((tool) => {
+            {tools.slice(2, 6).map((tool) => {
               const Icon = tool.icon;
               return (
                 <motion.button
@@ -170,14 +206,15 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowShapeMenu(!showShapeMenu)}
-              className={`p-2 rounded-lg transition-colors ${
-                ['rectangle', 'circle', 'triangle'].includes(activeTool?.id || '')
+              className={`flex items-center space-x-1 p-2 rounded-lg transition-colors ${
+                shapes.some(s => s.id === activeTool?.id)
                   ? 'bg-blue-100 text-blue-600'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
               title="Shapes"
             >
-              <Square className="w-5 h-5" />
+              {React.createElement(getCurrentShapeIcon(), { className: "w-5 h-5" })}
+              <ChevronDown className="w-3 h-3" />
             </motion.button>
 
             <AnimatePresence>
@@ -186,7 +223,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 grid grid-cols-3 gap-1 z-50"
+                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 grid grid-cols-3 gap-1 z-50 min-w-[180px]"
                 >
                   {shapes.map((shape) => {
                     const Icon = shape.icon;
@@ -195,17 +232,16 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                         key={shape.id}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => handleToolSelect({
-                          id: shape.id,
-                          name: shape.name,
-                          icon: Icon,
-                          cursor: 'crosshair',
-                          category: 'shape'
-                        })}
-                        className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                        onClick={() => handleShapeSelect(shape.id)}
+                        className={`flex flex-col items-center p-3 rounded-lg transition-colors ${
+                          selectedShapeType === shape.id
+                            ? 'bg-blue-100 text-blue-600'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
                         title={shape.name}
                       >
-                        <Icon className="w-4 h-4" />
+                        <Icon className="w-5 h-5 mb-1" />
+                        <span className="text-xs">{shape.name}</span>
                       </motion.button>
                     );
                   })}
@@ -214,9 +250,9 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* Media Tools */}
+          {/* Line and Arrow Tools */}
           <div className="flex items-center space-x-1 pr-2 border-r border-gray-200">
-            {tools.slice(10, 12).map((tool) => {
+            {tools.slice(6, 8).map((tool) => {
               const Icon = tool.icon;
               return (
                 <motion.button
@@ -229,12 +265,52 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                       ? 'bg-blue-100 text-blue-600'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
-                  title={tool.name}
+                  title={`${tool.name} (${tool.id.charAt(0).toUpperCase()})`}
                 >
                   <Icon className="w-5 h-5" />
                 </motion.button>
               );
             })}
+          </div>
+
+          {/* Connector Tool */}
+          <div className="relative">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleToolSelect({
+                id: 'connector',
+                name: 'Connector',
+                icon: GitBranch,
+                cursor: 'crosshair',
+                category: 'connector'
+              })}
+              className={`p-2 rounded-lg transition-colors ${
+                activeTool?.id === 'connector'
+                  ? 'bg-purple-100 text-purple-600'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+              title="Smart Connector"
+            >
+              <GitBranch className="w-5 h-5" />
+            </motion.button>
+          </div>
+
+          {/* Eraser Tool */}
+          <div className="flex items-center space-x-1 pr-2 border-r border-gray-200">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleToolSelect(tools[7])}
+              className={`p-2 rounded-lg transition-colors ${
+                activeTool?.id === 'eraser'
+                  ? 'bg-red-100 text-red-600'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+              title="Eraser (E)"
+            >
+              <Eraser className="w-5 h-5" />
+            </motion.button>
           </div>
 
           {/* Color Picker */}
@@ -244,7 +320,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowColorPicker(!showColorPicker)}
               className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1"
-              title="Colors"
+              title="Colors & Stroke"
             >
               <div 
                 className="w-4 h-4 rounded border border-gray-300"
@@ -259,41 +335,53 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50"
+                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50"
                 >
-                  <div className="grid grid-cols-6 gap-2 w-48 mb-3">
-                    {colors.map((color) => (
-                      <motion.button
-                        key={color}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`w-6 h-6 rounded border-2 transition-all ${
-                          currentColor === color
-                            ? 'border-blue-500 scale-110'
-                            : 'border-gray-300 hover:border-gray-400'
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => {
-                          onColorChange(color);
-                          setShowColorPicker(false);
-                        }}
-                      />
-                    ))}
-                  </div>
-                  
-                  {/* Stroke Width */}
-                  <div className="border-t pt-3">
-                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                      Stroke Width: {currentStrokeWidth}px
-                    </label>
-                    <input
-                      type="range"
-                      min="1"
-                      max="20"
-                      value={currentStrokeWidth}
-                      onChange={(e) => onStrokeWidthChange(parseInt(e.target.value))}
-                      className="w-full"
-                    />
+                  <div className="w-64">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Colors</h4>
+                    <div className="grid grid-cols-8 gap-2 mb-4">
+                      {colors.map((color) => (
+                        <motion.button
+                          key={color}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                          className={`w-6 h-6 rounded border-2 transition-all ${
+                            currentColor === color 
+                              ? 'border-blue-500 scale-110' 
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          onClick={() => {
+                            onColorChange(color);
+                          }}
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Stroke Width */}
+                    <div className="border-t pt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Stroke Width: {currentStrokeWidth}px
+                      </label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {strokeWidths.map((width) => (
+                          <button
+                            key={width}
+                            onClick={() => onStrokeWidthChange(width)}
+                            className={`p-2 rounded border transition-colors ${
+                              currentStrokeWidth === width
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-300 hover:border-gray-400'
+                            }`}
+                          >
+                            <div 
+                              className="w-full bg-gray-800 rounded"
+                              style={{ height: `${Math.min(width, 8)}px` }}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}

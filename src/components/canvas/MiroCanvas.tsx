@@ -1,12 +1,11 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Stage, Layer, Rect, Circle, Text, Line, Arrow, Group, Transformer } from 'react-konva';
+import { Stage, Layer, Rect, Circle, Text, Line, Arrow, Group, Transformer, RegularPolygon } from 'react-konva';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCanvas } from '../../hooks/useCanvas';
 import { CanvasObject, Point, Tool } from '../../types/canvas';
 import { CanvasToolbar } from './CanvasToolbar';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { CanvasGrid } from './CanvasGrid';
-import { SelectionBox } from './SelectionBox';
 import { MiniMap } from './MiniMap';
 import { LayerPanel } from './LayerPanel';
 import { PropertyPanel } from './PropertyPanel';
@@ -70,8 +69,16 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   const [showComments, setShowComments] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<number[]>([]);
-  const [currentColor, setCurrentColor] = useState('#000000');
+  const [currentColor, setCurrentColor] = useState('#3B82F6');
   const [currentStrokeWidth, setCurrentStrokeWidth] = useState(2);
+  const [isCreatingShape, setIsCreatingShape] = useState(false);
+  const [shapeStartPos, setShapeStartPos] = useState<Point | null>(null);
+  const [tempShape, setTempShape] = useState<any>(null);
+  const [isEditingText, setIsEditingText] = useState<string | null>(null);
+  const [selectedShapeType, setSelectedShapeType] = useState('rectangle');
+  const [connectorMode, setConnectorMode] = useState<'none' | 'creating' | 'connecting'>('none');
+  const [connectorStart, setConnectorStart] = useState<{ objectId: string; point: Point } | null>(null);
+  const [hoveredObject, setHoveredObject] = useState<string | null>(null);
 
   // Initialize default tool
   useEffect(() => {
@@ -104,9 +111,15 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   });
   useHotkeys('delete, backspace', () => deleteObjects(canvasState.selectedIds));
   useHotkeys('ctrl+a, cmd+a', () => selectObjects(canvasState.objects.map(obj => obj.id)));
-  useHotkeys('escape', clearSelection);
-  useHotkeys('space', () => setIsSpacePressed(true), { keyup: true });
-  useHotkeys('space', () => setIsSpacePressed(false), { keydown: false });
+  useHotkeys('escape', () => {
+    clearSelection();
+    setIsCreatingShape(false);
+    setTempShape(null);
+    setShapeStartPos(null);
+    setConnectorMode('none');
+    setConnectorStart(null);
+    setIsEditingText(null);
+  });
 
   // Tool shortcuts
   useHotkeys('v', () => setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' }));
@@ -117,8 +130,35 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   useHotkeys('l', () => setActiveTool({ id: 'line', name: 'Line', icon: null, cursor: 'crosshair', category: 'draw' }));
   useHotkeys('s', () => setActiveTool({ id: 'sticky', name: 'Sticky Note', icon: null, cursor: 'crosshair', category: 'text' }));
   useHotkeys('p', () => setActiveTool({ id: 'pen', name: 'Pen', icon: null, cursor: 'crosshair', category: 'draw' }));
+  useHotkeys('a', () => setActiveTool({ id: 'arrow', name: 'Arrow', icon: null, cursor: 'crosshair', category: 'connector' }));
+  useHotkeys('e', () => setActiveTool({ id: 'eraser', name: 'Eraser', icon: null, cursor: 'crosshair', category: 'draw' }));
   useHotkeys('ctrl+0, cmd+0', resetViewport);
   useHotkeys('ctrl+1, cmd+1', fitToScreen);
+
+  // Space key handling for pan mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !isEditingText) {
+        e.preventDefault();
+        setIsSpacePressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsSpacePressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isEditingText]);
 
   // Zoom with mouse wheel
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -139,12 +179,13 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     const direction = e.evt.deltaY > 0 ? -1 : 1;
     const factor = 1.1;
     const newScale = direction > 0 ? oldScale * factor : oldScale / factor;
+    const clampedScale = Math.max(0.1, Math.min(5, newScale));
     
-    setZoom(newScale);
+    setZoom(clampedScale);
     
     const newPos = {
-      x: pointer.x - mousePointTo.x * newScale,
-      y: pointer.y - mousePointTo.y * newScale,
+      x: pointer.x - mousePointTo.x * clampedScale,
+      y: pointer.y - mousePointTo.y * clampedScale,
     };
     
     stage.position(newPos);
@@ -171,33 +212,20 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     // If clicking on empty space, clear selection
     if (e.target === stage) {
       clearSelection();
-      return;
-    }
-
-    // Handle tool-specific actions
-    if (activeTool) {
-      switch (activeTool.id) {
-        case 'sticky':
-          addStickyNote(canvasPos);
-          break;
-        case 'text':
-          addTextBox(canvasPos);
-          break;
-        case 'rectangle':
-          addRectangle(canvasPos);
-          break;
-        case 'circle':
-          addCircle(canvasPos);
-          break;
-        case 'line':
-          addLine(canvasPos);
-          break;
-        case 'arrow':
-          addArrow(canvasPos);
-          break;
+      
+      // Handle tool-specific actions only on empty space
+      if (activeTool && !isCreatingShape) {
+        switch (activeTool.id) {
+          case 'sticky':
+            addStickyNote(canvasPos);
+            break;
+          case 'text':
+            addTextBox(canvasPos);
+            break;
+        }
       }
     }
-  }, [activeTool, addObject, clearSelection]);
+  }, [activeTool, clearSelection, isCreatingShape]);
 
   // Handle stage mouse down
   const handleStageMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -212,6 +240,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       y: (pos.y - stage.y()) / stage.scaleY()
     };
 
+    // Handle space key or hand tool for panning
     if (isSpacePressed || activeTool?.id === 'hand') {
       setIsDragging(true);
       setDragStart(pos);
@@ -219,16 +248,60 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
+    // Handle pen tool
     if (activeTool?.id === 'pen') {
       setIsDrawing(true);
       setCurrentPath([canvasPos.x, canvasPos.y]);
       return;
     }
 
+    // Handle eraser tool
+    if (activeTool?.id === 'eraser') {
+      const clickedObject = e.target;
+      if (clickedObject !== stage) {
+        const objectId = clickedObject.id();
+        if (objectId) {
+          deleteObjects([objectId]);
+        }
+      }
+      return;
+    }
+
+    // Handle connector tool
+    if (activeTool?.id === 'connector') {
+      const clickedObject = e.target;
+      if (clickedObject !== stage && clickedObject.id()) {
+        if (connectorMode === 'none') {
+          setConnectorMode('creating');
+          setConnectorStart({
+            objectId: clickedObject.id(),
+            point: canvasPos
+          });
+        } else if (connectorMode === 'creating' && connectorStart) {
+          // Create connector between objects
+          addConnector(connectorStart, {
+            objectId: clickedObject.id(),
+            point: canvasPos
+          });
+          setConnectorMode('none');
+          setConnectorStart(null);
+        }
+      }
+      return;
+    }
+
+    // Handle shape creation tools
+    if (activeTool && ['rectangle', 'circle', 'triangle', 'diamond', 'star', 'line', 'arrow'].includes(activeTool.id) && e.target === stage) {
+      setIsCreatingShape(true);
+      setShapeStartPos(canvasPos);
+      return;
+    }
+
+    // Handle selection box
     if (activeTool?.id === 'select' && e.target === stage) {
       setSelectionBox({ start: canvasPos, end: canvasPos });
     }
-  }, [isSpacePressed, activeTool]);
+  }, [isSpacePressed, activeTool, connectorMode, connectorStart, deleteObjects]);
 
   // Handle stage mouse move
   const handleStageMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -243,6 +316,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       y: (pos.y - stage.y()) / stage.scaleY()
     };
 
+    // Handle panning
     if (isDragging && dragStart) {
       const dx = pos.x - dragStart.x;
       const dy = pos.y - dragStart.y;
@@ -251,15 +325,48 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
+    // Handle pen drawing
     if (isDrawing && activeTool?.id === 'pen') {
       setCurrentPath(prev => [...prev, canvasPos.x, canvasPos.y]);
       return;
     }
 
+    // Handle shape creation
+    if (isCreatingShape && shapeStartPos && activeTool) {
+      const width = Math.abs(canvasPos.x - shapeStartPos.x);
+      const height = Math.abs(canvasPos.y - shapeStartPos.y);
+      const x = Math.min(canvasPos.x, shapeStartPos.x);
+      const y = Math.min(canvasPos.y, shapeStartPos.y);
+
+      setTempShape({
+        type: activeTool.id,
+        x,
+        y,
+        width: Math.max(width, 10),
+        height: Math.max(height, 10),
+        startPos: shapeStartPos,
+        endPos: canvasPos
+      });
+      return;
+    }
+
+    // Handle selection box
     if (selectionBox) {
       setSelectionBox(prev => prev ? { ...prev, end: canvasPos } : null);
     }
-  }, [isDragging, dragStart, selectionBox, isDrawing, activeTool, pan]);
+
+    // Update cursor for hovering over objects
+    const target = e.target;
+    if (target !== stage && target.id()) {
+      setHoveredObject(target.id());
+      if (activeTool?.id === 'connector') {
+        stage.container().style.cursor = 'pointer';
+      }
+    } else {
+      setHoveredObject(null);
+      stage.container().style.cursor = activeTool?.cursor || 'default';
+    }
+  }, [isDragging, dragStart, selectionBox, isDrawing, activeTool, pan, isCreatingShape, shapeStartPos]);
 
   // Handle stage mouse up
   const handleStageMouseUp = useCallback(() => {
@@ -270,8 +377,8 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     setDragStart(null);
     stage.container().style.cursor = activeTool?.cursor || 'default';
 
+    // Handle pen drawing completion
     if (isDrawing && currentPath.length > 2) {
-      // Create a drawing object
       addObject({
         type: 'line',
         position: { x: 0, y: 0 },
@@ -293,8 +400,76 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       setIsDrawing(false);
     }
 
+    // Handle shape creation completion
+    if (isCreatingShape && shapeStartPos && tempShape && activeTool) {
+      const width = Math.max(tempShape.width, 10);
+      const height = Math.max(tempShape.height, 10);
+
+      switch (activeTool.id) {
+        case 'rectangle':
+        case 'circle':
+        case 'triangle':
+        case 'diamond':
+        case 'star':
+          addObject({
+            type: 'shape',
+            position: { x: tempShape.x, y: tempShape.y },
+            size: { width, height },
+            transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+            style: {
+              fill: currentColor,
+              stroke: currentColor,
+              strokeWidth: currentStrokeWidth
+            },
+            layer: 0,
+            author: currentUser?.id || 'anonymous',
+            metadata: { shapeType: activeTool.id }
+          });
+          break;
+        case 'line':
+          addObject({
+            type: 'line',
+            position: { x: shapeStartPos.x, y: shapeStartPos.y },
+            size: { width: 0, height: 0 },
+            transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+            style: {
+              stroke: currentColor,
+              strokeWidth: currentStrokeWidth
+            },
+            layer: 0,
+            author: currentUser?.id || 'anonymous',
+            metadata: { 
+              points: [0, 0, tempShape.endPos.x - shapeStartPos.x, tempShape.endPos.y - shapeStartPos.y]
+            }
+          });
+          break;
+        case 'arrow':
+          addObject({
+            type: 'arrow',
+            position: { x: shapeStartPos.x, y: shapeStartPos.y },
+            size: { width: 0, height: 0 },
+            transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+            style: {
+              stroke: currentColor,
+              strokeWidth: currentStrokeWidth,
+              fill: currentColor
+            },
+            layer: 0,
+            author: currentUser?.id || 'anonymous',
+            metadata: { 
+              points: [0, 0, tempShape.endPos.x - shapeStartPos.x, tempShape.endPos.y - shapeStartPos.y]
+            }
+          });
+          break;
+      }
+
+      setIsCreatingShape(false);
+      setShapeStartPos(null);
+      setTempShape(null);
+    }
+
+    // Handle selection box
     if (selectionBox) {
-      // Select objects within selection box
       const box = selectionBox;
       const selectedObjects = canvasState.objects.filter(obj => {
         const objBounds = {
@@ -322,7 +497,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       selectObjects(selectedObjects.map(obj => obj.id));
       setSelectionBox(null);
     }
-  }, [activeTool, selectionBox, canvasState.objects, selectObjects, isDrawing, currentPath, addObject, currentColor, currentStrokeWidth, currentUser]);
+  }, [activeTool, selectionBox, canvasState.objects, selectObjects, isDrawing, currentPath, addObject, currentColor, currentStrokeWidth, currentUser, isCreatingShape, shapeStartPos, tempShape]);
 
   // Handle context menu
   const handleContextMenu = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -337,9 +512,78 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     setContextMenu({ x: pos.x, y: pos.y });
   }, []);
 
+  // Handle double click for text editing
+  const handleDoubleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    const target = e.target;
+    if (target.id() && (target.getClassName() === 'Group' || target.getClassName() === 'Text')) {
+      const objectId = target.id();
+      const obj = canvasState.objects.find(o => o.id === objectId);
+      if (obj && (obj.type === 'text' || obj.type === 'sticky')) {
+        setIsEditingText(objectId);
+        createTextEditor(obj);
+      }
+    }
+  }, [canvasState.objects]);
+
+  // Create text editor
+  const createTextEditor = (obj: CanvasObject) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const textNode = stage.findOne(`#${obj.id}`);
+    if (!textNode) return;
+
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+
+    const transform = textNode.getAbsoluteTransform();
+    const pos = transform.point({ x: 0, y: 0 });
+
+    textarea.value = obj.content || '';
+    textarea.style.position = 'absolute';
+    textarea.style.top = pos.y + 'px';
+    textarea.style.left = pos.x + 'px';
+    textarea.style.width = obj.size.width + 'px';
+    textarea.style.height = obj.size.height + 'px';
+    textarea.style.fontSize = (obj.style.fontSize || 16) + 'px';
+    textarea.style.fontFamily = obj.style.fontFamily || 'Arial';
+    textarea.style.border = '2px solid #3B82F6';
+    textarea.style.padding = obj.type === 'sticky' ? '10px' : '0px';
+    textarea.style.margin = '0px';
+    textarea.style.overflow = 'hidden';
+    textarea.style.background = obj.type === 'sticky' ? (obj.style.fill || '#FFE066') : 'transparent';
+    textarea.style.outline = 'none';
+    textarea.style.resize = 'none';
+    textarea.style.lineHeight = '1.2';
+    textarea.style.color = obj.style.textColor || obj.style.fill || '#000000';
+    textarea.style.borderRadius = obj.type === 'sticky' ? '8px' : '4px';
+    textarea.style.zIndex = '1000';
+
+    textarea.focus();
+    textarea.select();
+
+    const handleBlur = () => {
+      updateObject(obj.id, { content: textarea.value });
+      document.body.removeChild(textarea);
+      setIsEditingText(null);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        document.body.removeChild(textarea);
+        setIsEditingText(null);
+      } else if (e.key === 'Enter' && !e.shiftKey && obj.type !== 'sticky') {
+        handleBlur();
+      }
+    };
+
+    textarea.addEventListener('blur', handleBlur);
+    textarea.addEventListener('keydown', handleKeyDown);
+  };
+
   // Add object functions
   const addStickyNote = useCallback((position: Point) => {
-    addObject({
+    const id = addObject({
       type: 'sticky',
       position,
       size: { width: 200, height: 200 },
@@ -349,16 +593,27 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         stroke: '#E6CC00',
         strokeWidth: 1,
         fontSize: 14,
-        fontFamily: 'Arial'
+        fontFamily: 'Arial',
+        textColor: '#000000'
       },
       content: 'New sticky note',
       layer: 0,
       author: currentUser?.id || 'anonymous'
     });
-  }, [addObject, currentUser]);
+    
+    // Auto-select and start editing
+    setTimeout(() => {
+      selectObjects([id]);
+      const obj = canvasState.objects.find(o => o.id === id);
+      if (obj) {
+        setIsEditingText(id);
+        createTextEditor(obj);
+      }
+    }, 100);
+  }, [addObject, currentUser, selectObjects, canvasState.objects]);
 
   const addTextBox = useCallback((position: Point) => {
-    addObject({
+    const id = addObject({
       type: 'text',
       position,
       size: { width: 200, height: 50 },
@@ -372,65 +627,23 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       layer: 0,
       author: currentUser?.id || 'anonymous'
     });
-  }, [addObject, currentUser]);
 
-  const addRectangle = useCallback((position: Point) => {
-    addObject({
-      type: 'shape',
-      position,
-      size: { width: 150, height: 100 },
-      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
-      style: {
-        fill: currentColor,
-        stroke: currentColor,
-        strokeWidth: currentStrokeWidth
-      },
-      layer: 0,
-      author: currentUser?.id || 'anonymous',
-      metadata: { shapeType: 'rectangle' }
-    });
-  }, [addObject, currentUser, currentColor, currentStrokeWidth]);
-
-  const addCircle = useCallback((position: Point) => {
-    addObject({
-      type: 'shape',
-      position,
-      size: { width: 120, height: 120 },
-      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
-      style: {
-        fill: currentColor,
-        stroke: currentColor,
-        strokeWidth: currentStrokeWidth
-      },
-      layer: 0,
-      author: currentUser?.id || 'anonymous',
-      metadata: { shapeType: 'circle' }
-    });
-  }, [addObject, currentUser, currentColor, currentStrokeWidth]);
-
-  const addLine = useCallback((position: Point) => {
-    addObject({
-      type: 'line',
-      position,
-      size: { width: 100, height: 0 },
-      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
-      style: {
-        stroke: currentColor,
-        strokeWidth: currentStrokeWidth
-      },
-      layer: 0,
-      author: currentUser?.id || 'anonymous',
-      metadata: { 
-        points: [0, 0, 100, 0]
+    // Auto-select and start editing
+    setTimeout(() => {
+      selectObjects([id]);
+      const obj = canvasState.objects.find(o => o.id === id);
+      if (obj) {
+        setIsEditingText(id);
+        createTextEditor(obj);
       }
-    });
-  }, [addObject, currentUser, currentColor, currentStrokeWidth]);
+    }, 100);
+  }, [addObject, currentUser, selectObjects, canvasState.objects]);
 
-  const addArrow = useCallback((position: Point) => {
+  const addConnector = useCallback((start: { objectId: string; point: Point }, end: { objectId: string; point: Point }) => {
     addObject({
-      type: 'arrow',
-      position,
-      size: { width: 100, height: 0 },
+      type: 'connector',
+      position: start.point,
+      size: { width: 0, height: 0 },
       transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
       style: {
         stroke: currentColor,
@@ -439,11 +652,14 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       },
       layer: 0,
       author: currentUser?.id || 'anonymous',
-      metadata: { 
-        points: [0, 0, 100, 0]
+      metadata: {
+        startObjectId: start.objectId,
+        endObjectId: end.objectId,
+        points: [0, 0, end.point.x - start.point.x, end.point.y - start.point.y],
+        arrowEnd: true
       }
     });
-  }, [addObject, currentUser, currentColor, currentStrokeWidth]);
+  }, [addObject, currentColor, currentStrokeWidth, currentUser]);
 
   // Update transformer when selection changes
   useEffect(() => {
@@ -460,14 +676,123 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     transformer.getLayer()?.batchDraw();
   }, [canvasState.selectedIds]);
 
+  // Render temporary shape during creation
+  const renderTempShape = () => {
+    if (!tempShape || !isCreatingShape) return null;
+
+    const commonProps = {
+      x: tempShape.x,
+      y: tempShape.y,
+      stroke: currentColor,
+      strokeWidth: currentStrokeWidth,
+      fill: 'transparent',
+      dash: [5, 5],
+      opacity: 0.7
+    };
+
+    switch (tempShape.type) {
+      case 'rectangle':
+        return (
+          <Rect
+            {...commonProps}
+            width={tempShape.width}
+            height={tempShape.height}
+          />
+        );
+      case 'circle':
+        const radius = Math.min(tempShape.width, tempShape.height) / 2;
+        return (
+          <Circle
+            {...commonProps}
+            x={tempShape.x + radius}
+            y={tempShape.y + radius}
+            radius={radius}
+          />
+        );
+      case 'triangle':
+        return (
+          <RegularPolygon
+            {...commonProps}
+            x={tempShape.x + tempShape.width / 2}
+            y={tempShape.y + tempShape.height / 2}
+            sides={3}
+            radius={Math.min(tempShape.width, tempShape.height) / 2}
+          />
+        );
+      case 'diamond':
+        return (
+          <RegularPolygon
+            {...commonProps}
+            x={tempShape.x + tempShape.width / 2}
+            y={tempShape.y + tempShape.height / 2}
+            sides={4}
+            radius={Math.min(tempShape.width, tempShape.height) / 2}
+            rotation={45}
+          />
+        );
+      case 'star':
+        return (
+          <RegularPolygon
+            {...commonProps}
+            x={tempShape.x + tempShape.width / 2}
+            y={tempShape.y + tempShape.height / 2}
+            sides={5}
+            radius={Math.min(tempShape.width, tempShape.height) / 2}
+            innerRadius={Math.min(tempShape.width, tempShape.height) / 4}
+          />
+        );
+      case 'line':
+        return (
+          <Line
+            {...commonProps}
+            points={[
+              tempShape.startPos.x,
+              tempShape.startPos.y,
+              tempShape.endPos.x,
+              tempShape.endPos.y
+            ]}
+          />
+        );
+      case 'arrow':
+        return (
+          <Arrow
+            {...commonProps}
+            points={[
+              tempShape.startPos.x,
+              tempShape.startPos.y,
+              tempShape.endPos.x,
+              tempShape.endPos.y
+            ]}
+            pointerLength={10}
+            pointerWidth={8}
+            fill={currentColor}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   // Render canvas objects
   const renderObjects = () => {
     return canvasState.objects.map(obj => {
       const key = obj.id;
       const isSelected = canvasState.selectedIds.includes(obj.id);
+      const isHovered = hoveredObject === obj.id;
 
-      const handleObjectClick = () => {
-        selectObjects([obj.id]);
+      const handleObjectClick = (e: any) => {
+        e.cancelBubble = true;
+        
+        // Always allow selection on any tool for smooth interaction
+        if (e.evt.shiftKey) {
+          // Add to selection
+          const newSelection = canvasState.selectedIds.includes(obj.id)
+            ? canvasState.selectedIds.filter(id => id !== obj.id)
+            : [...canvasState.selectedIds, obj.id];
+          selectObjects(newSelection);
+        } else {
+          selectObjects([obj.id]);
+        }
       };
 
       const handleDragEnd = (e: any) => {
@@ -496,6 +821,9 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         });
       };
 
+      // Make objects draggable when select tool is active OR when object is selected
+      const isDraggable = activeTool?.id === 'select' || isSelected;
+
       switch (obj.type) {
         case 'sticky':
           return (
@@ -505,8 +833,9 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               x={obj.position.x}
               y={obj.position.y}
               rotation={obj.transform.rotation}
-              draggable
+              draggable={isDraggable}
               onClick={handleObjectClick}
+              onDblClick={handleDoubleClick}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
             >
@@ -518,23 +847,25 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                 strokeWidth={obj.style.strokeWidth || 1}
                 cornerRadius={8}
                 shadowColor="rgba(0,0,0,0.2)"
-                shadowBlur={isSelected ? 10 : 5}
+                shadowBlur={isSelected ? 10 : isHovered ? 8 : 5}
                 shadowOffset={{ x: 2, y: 2 }}
                 shadowOpacity={0.3}
               />
-              <Text
-                text={obj.content || 'Double-click to edit'}
-                x={10}
-                y={10}
-                width={obj.size.width - 20}
-                height={obj.size.height - 20}
-                fontSize={obj.style.fontSize || 14}
-                fontFamily={obj.style.fontFamily || 'Arial'}
-                fill={obj.style.textColor || '#000000'}
-                align={obj.style.textAlign || 'left'}
-                verticalAlign="top"
-                wrap="word"
-              />
+              {!isEditingText && (
+                <Text
+                  text={obj.content || 'Double-click to edit'}
+                  x={10}
+                  y={10}
+                  width={obj.size.width - 20}
+                  height={obj.size.height - 20}
+                  fontSize={obj.style.fontSize || 14}
+                  fontFamily={obj.style.fontFamily || 'Arial'}
+                  fill={obj.style.textColor || '#000000'}
+                  align={obj.style.textAlign || 'left'}
+                  verticalAlign="top"
+                  wrap="word"
+                />
+              )}
             </Group>
           );
 
@@ -546,23 +877,26 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               x={obj.position.x}
               y={obj.position.y}
               rotation={obj.transform.rotation}
-              draggable
+              draggable={isDraggable}
               onClick={handleObjectClick}
+              onDblClick={handleDoubleClick}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
             >
-              <Text
-                text={obj.content || 'Type here...'}
-                width={obj.size.width}
-                height={obj.size.height}
-                fontSize={obj.style.fontSize || 16}
-                fontFamily={obj.style.fontFamily || 'Arial'}
-                fontStyle={obj.style.fontWeight || 'normal'}
-                fill={obj.style.fill || '#000000'}
-                align={obj.style.textAlign || 'left'}
-                verticalAlign="top"
-                wrap="word"
-              />
+              {!isEditingText && (
+                <Text
+                  text={obj.content || 'Type here...'}
+                  width={obj.size.width}
+                  height={obj.size.height}
+                  fontSize={obj.style.fontSize || 16}
+                  fontFamily={obj.style.fontFamily || 'Arial'}
+                  fontStyle={obj.style.fontWeight || 'normal'}
+                  fill={obj.style.fill || '#000000'}
+                  align={obj.style.textAlign || 'left'}
+                  verticalAlign="top"
+                  wrap="word"
+                />
+              )}
             </Group>
           );
 
@@ -575,7 +909,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               x={obj.position.x}
               y={obj.position.y}
               rotation={obj.transform.rotation}
-              draggable
+              draggable={isDraggable}
               onClick={handleObjectClick}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
@@ -589,6 +923,57 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   stroke={obj.style.stroke || '#1E40AF'}
                   strokeWidth={obj.style.strokeWidth || 2}
                   opacity={obj.style.opacity || 1}
+                  shadowColor="rgba(0,0,0,0.2)"
+                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowOffset={{ x: 2, y: 2 }}
+                  shadowOpacity={0.3}
+                />
+              ) : shapeType === 'triangle' ? (
+                <RegularPolygon
+                  x={obj.size.width / 2}
+                  y={obj.size.height / 2}
+                  sides={3}
+                  radius={Math.min(obj.size.width, obj.size.height) / 2}
+                  fill={obj.style.fill || '#3B82F6'}
+                  stroke={obj.style.stroke || '#1E40AF'}
+                  strokeWidth={obj.style.strokeWidth || 2}
+                  opacity={obj.style.opacity || 1}
+                  shadowColor="rgba(0,0,0,0.2)"
+                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowOffset={{ x: 2, y: 2 }}
+                  shadowOpacity={0.3}
+                />
+              ) : shapeType === 'diamond' ? (
+                <RegularPolygon
+                  x={obj.size.width / 2}
+                  y={obj.size.height / 2}
+                  sides={4}
+                  radius={Math.min(obj.size.width, obj.size.height) / 2}
+                  rotation={45}
+                  fill={obj.style.fill || '#3B82F6'}
+                  stroke={obj.style.stroke || '#1E40AF'}
+                  strokeWidth={obj.style.strokeWidth || 2}
+                  opacity={obj.style.opacity || 1}
+                  shadowColor="rgba(0,0,0,0.2)"
+                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowOffset={{ x: 2, y: 2 }}
+                  shadowOpacity={0.3}
+                />
+              ) : shapeType === 'star' ? (
+                <RegularPolygon
+                  x={obj.size.width / 2}
+                  y={obj.size.height / 2}
+                  sides={5}
+                  radius={Math.min(obj.size.width, obj.size.height) / 2}
+                  innerRadius={Math.min(obj.size.width, obj.size.height) / 4}
+                  fill={obj.style.fill || '#3B82F6'}
+                  stroke={obj.style.stroke || '#1E40AF'}
+                  strokeWidth={obj.style.strokeWidth || 2}
+                  opacity={obj.style.opacity || 1}
+                  shadowColor="rgba(0,0,0,0.2)"
+                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowOffset={{ x: 2, y: 2 }}
+                  shadowOpacity={0.3}
                 />
               ) : (
                 <Rect
@@ -599,6 +984,10 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   strokeWidth={obj.style.strokeWidth || 2}
                   cornerRadius={obj.style.borderRadius || 0}
                   opacity={obj.style.opacity || 1}
+                  shadowColor="rgba(0,0,0,0.2)"
+                  shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
+                  shadowOffset={{ x: 2, y: 2 }}
+                  shadowOpacity={0.3}
                 />
               )}
             </Group>
@@ -618,13 +1007,18 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               lineCap="round"
               lineJoin="round"
               opacity={obj.style.opacity || 1}
-              draggable
+              draggable={isDraggable}
               onClick={handleObjectClick}
               onDragEnd={handleDragEnd}
+              shadowColor="rgba(0,0,0,0.2)"
+              shadowBlur={isSelected ? 6 : isHovered ? 4 : 0}
+              shadowOffset={{ x: 1, y: 1 }}
+              shadowOpacity={0.3}
             />
           );
 
         case 'arrow':
+        case 'connector':
           const arrowPoints = obj.metadata?.points || [0, 0, 100, 0];
           return (
             <Arrow
@@ -641,9 +1035,13 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               lineCap="round"
               lineJoin="round"
               opacity={obj.style.opacity || 1}
-              draggable
+              draggable={isDraggable}
               onClick={handleObjectClick}
               onDragEnd={handleDragEnd}
+              shadowColor="rgba(0,0,0,0.2)"
+              shadowBlur={isSelected ? 6 : isHovered ? 4 : 0}
+              shadowOffset={{ x: 1, y: 1 }}
+              shadowOpacity={0.3}
             />
           );
 
@@ -671,13 +1069,17 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         onColorChange={setCurrentColor}
         currentStrokeWidth={currentStrokeWidth}
         onStrokeWidthChange={setCurrentStrokeWidth}
+        selectedShapeType={selectedShapeType}
+        onShapeTypeChange={setSelectedShapeType}
+        connectorMode={connectorMode}
+        onConnectorModeChange={setConnectorMode}
       />
 
       {/* Main Canvas */}
       <div 
         ref={canvasRef}
         className="w-full h-full"
-        style={{ cursor: activeTool?.cursor || 'default' }}
+        style={{ cursor: isSpacePressed ? 'grab' : (activeTool?.cursor || 'default') }}
       >
         <Stage
           ref={stageRef}
@@ -693,6 +1095,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
           onMouseMove={handleStageMouseMove}
           onMouseUp={handleStageMouseUp}
           onContextMenu={handleContextMenu}
+          onDblClick={handleDoubleClick}
         >
           <Layer ref={layerRef}>
             {/* Grid */}
@@ -707,6 +1110,9 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
 
             {/* Canvas Objects */}
             {renderObjects()}
+
+            {/* Temporary Shape During Creation */}
+            {renderTempShape()}
 
             {/* Current Drawing Path */}
             {isDrawing && currentPath.length > 2 && (
@@ -734,6 +1140,17 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               />
             )}
 
+            {/* Connector Preview */}
+            {connectorMode === 'creating' && connectorStart && (
+              <Line
+                points={[connectorStart.point.x, connectorStart.point.y, connectorStart.point.x + 50, connectorStart.point.y + 50]}
+                stroke={currentColor}
+                strokeWidth={currentStrokeWidth}
+                dash={[5, 5]}
+                opacity={0.7}
+              />
+            )}
+
             {/* Transformer for selected objects */}
             <Transformer
               ref={transformerRef}
@@ -743,6 +1160,14 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                 }
                 return newBox;
               }}
+              enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+              rotateEnabled={true}
+              borderStroke="#3B82F6"
+              borderStrokeWidth={2}
+              anchorFill="#3B82F6"
+              anchorStroke="#FFFFFF"
+              anchorStrokeWidth={2}
+              anchorSize={8}
             />
           </Layer>
         </Stage>
@@ -823,6 +1248,33 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
           />
         )}
       </AnimatePresence>
+
+      {/* Instructions */}
+      {canvasState.objects.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center space-y-4 bg-white/90 p-8 rounded-xl shadow-lg">
+            <h3 className="text-xl font-semibold text-gray-700">
+              Welcome to MindMeld Canvas
+            </h3>
+            <div className="text-gray-600 space-y-2">
+              <p>• Double-click any object to edit text</p>
+              <p>• Click and drag to create shapes</p>
+              <p>• Use the pen tool to draw freely</p>
+              <p>• Eraser tool removes objects on click</p>
+              <p>• All shapes: rectangle, circle, triangle, diamond, star</p>
+              <p>• Smart connectors link objects together</p>
+              <p>• Hold Space or use Hand tool to pan</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Messages */}
+      {connectorMode === 'creating' && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          Click on another object to create a connection
+        </div>
+      )}
     </div>
   );
 };
