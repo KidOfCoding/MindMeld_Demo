@@ -5,6 +5,16 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    exclude: ['lucide-react'],
+    include: ['lucide-react'],
   },
+  server: {
+    fs: {
+      strict: false
+    }
+  },
+  build: {
+    commonjsOptions: {
+      include: [/lucide-react/, /node_modules/]
+    }
+  }
 });
