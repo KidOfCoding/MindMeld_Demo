@@ -8,7 +8,7 @@ import { DrawingElement } from './DrawingElement';
 import { SelectionBox } from './SelectionBox';
 import { ContextMenu } from './ContextMenu';
 import { Idea, User, CanvasElement } from '../../types';
-import { Plus, ZoomIn, ZoomOut, Maximize, Download, Share2, Copy, Trash2, RotateCw, Layers, Grid, Lock, Move, ArrowLeftRight, ArrowUpDown, PanelLeftOpen, PanelLeftClose, Minimize, Palette, MoreHorizontal, Settings, Fullscreen, Fullscreen as FullscreenExit } from 'lucide-react';
+import { Plus, ZoomIn, ZoomOut, Maximize, Download, Share2, Copy, Trash2, RotateCw, Layers, Grid, Lock, Move, ArrowLeftRight, ArrowUpDown, PanelLeftOpen, PanelLeftClose, Minimize, Palette, MoreHorizontal, Settings, Fullscreen } from 'lucide-react';
 
 interface CanvasProps {
   ideas: Idea[];
