@@ -156,14 +156,27 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
 
   const getToolButtonClass = (tool: Tool) => {
     const isActive = activeTool?.id === tool.id;
-    const isActiveAndWorking = isActive && isToolActive;
+    const isActiveAndWorking = isActive && (tool.id !== 'select' && tool.id !== 'hand');
     
     if (isActiveAndWorking) {
-      return 'bg-green-100 text-green-600 ring-2 ring-green-300';
+      return 'bg-green-100 text-green-600 ring-2 ring-green-300 shadow-md';
     } else if (isActive) {
-      return 'bg-blue-100 text-blue-600';
+      return 'bg-blue-100 text-blue-600 shadow-sm';
     } else {
-      return 'text-gray-600 hover:bg-gray-100';
+      return 'text-gray-600 hover:bg-gray-100 hover:text-gray-800';
+    }
+  };
+
+  const getShapeButtonClass = () => {
+    const isShapeActive = shapes.some(s => s.id === activeTool?.id);
+    const isActiveAndWorking = isShapeActive && isToolActive;
+    
+    if (isActiveAndWorking) {
+      return 'bg-green-100 text-green-600 ring-2 ring-green-300 shadow-md';
+    } else if (isShapeActive) {
+      return 'bg-blue-100 text-blue-600 shadow-sm';
+    } else {
+      return 'text-gray-600 hover:bg-gray-100 hover:text-gray-800';
     }
   };
 
@@ -182,7 +195,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleToolSelect(tool)}
-                  className={`p-2 rounded-lg transition-colors ${getToolButtonClass(tool)}`}
+                  className={`p-2 rounded-lg transition-all duration-200 ${getToolButtonClass(tool)}`}
                   title={`${tool.name} (${tool.id.charAt(0).toUpperCase()})`}
                 >
                   <Icon className="w-5 h-5" />
@@ -201,7 +214,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleToolSelect(tool)}
-                  className={`p-2 rounded-lg transition-colors ${getToolButtonClass(tool)}`}
+                  className={`p-2 rounded-lg transition-all duration-200 ${getToolButtonClass(tool)}`}
                   title={`${tool.name} (${tool.id.charAt(0).toUpperCase()})`}
                 >
                   <Icon className="w-5 h-5" />
@@ -216,13 +229,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowShapeMenu(!showShapeMenu)}
-              className={`flex items-center space-x-1 p-2 rounded-lg transition-colors ${
-                shapes.some(s => s.id === activeTool?.id)
-                  ? isToolActive 
-                    ? 'bg-green-100 text-green-600 ring-2 ring-green-300'
-                    : 'bg-blue-100 text-blue-600'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`flex items-center space-x-1 p-2 rounded-lg transition-all duration-200 ${getShapeButtonClass()}`}
               title="Shapes"
             >
               {React.createElement(getCurrentShapeIcon(), { className: "w-5 h-5" })}
@@ -272,7 +279,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleToolSelect(tool)}
-                  className={`p-2 rounded-lg transition-colors ${getToolButtonClass(tool)}`}
+                  className={`p-2 rounded-lg transition-all duration-200 ${getToolButtonClass(tool)}`}
                   title={`${tool.name} (${tool.id.charAt(0).toUpperCase()})`}
                 >
                   <Icon className="w-5 h-5" />
@@ -288,19 +295,19 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               whileTap={{ scale: 0.95 }}
               onClick={() => handleToolSelect({
                 id: 'connector',
-                name: 'Connector',
+                name: 'Smart Connector',
                 icon: GitBranch,
                 cursor: 'crosshair',
                 category: 'connector'
               })}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-all duration-200 ${
                 activeTool?.id === 'connector'
                   ? isToolActive
-                    ? 'bg-green-100 text-green-600 ring-2 ring-green-300'
-                    : 'bg-purple-100 text-purple-600'
-                  : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-green-100 text-green-600 ring-2 ring-green-300 shadow-md'
+                    : 'bg-purple-100 text-purple-600 shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
               }`}
-              title="Smart Connector"
+              title="Smart Connector - Click object A, then object B"
             >
               <GitBranch className="w-5 h-5" />
             </motion.button>
@@ -312,8 +319,8 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleToolSelect(tools[7])}
-              className={`p-2 rounded-lg transition-colors ${getToolButtonClass(tools[7])}`}
-              title="Eraser (E)"
+              className={`p-2 rounded-lg transition-all duration-200 ${getToolButtonClass(tools[7])}`}
+              title="Eraser - Click any object to delete (E)"
             >
               <Eraser className="w-5 h-5" />
             </motion.button>
@@ -325,7 +332,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowColorPicker(!showColorPicker)}
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1"
+              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors flex items-center space-x-1"
               title="Colors & Stroke"
             >
               <div 
@@ -353,7 +360,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                           whileTap={{ scale: 0.95 }}
                           className={`w-6 h-6 rounded border-2 transition-all ${
                             currentColor === color 
-                              ? 'border-blue-500 scale-110' 
+                              ? 'border-blue-500 scale-110 shadow-md' 
                               : 'border-gray-300 hover:border-gray-400'
                           }`}
                           style={{ backgroundColor: color }}
@@ -403,7 +410,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => onZoomChange(zoom / 1.2)}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
@@ -417,7 +424,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => onZoomChange(zoom * 1.2)}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Zoom In"
           >
             <ZoomIn className="w-4 h-4" />
@@ -427,7 +434,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onResetView}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Reset View"
           >
             <Maximize className="w-4 h-4" />
@@ -437,7 +444,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onFitToScreen}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Fit to Screen"
           >
             <Fullscreen className="w-4 h-4" />
@@ -452,7 +459,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onToggleMiniMap}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Toggle Mini Map"
           >
             <Map className="w-4 h-4" />
@@ -462,7 +469,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onToggleLayers}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Toggle Layers"
           >
             <Layers className="w-4 h-4" />
@@ -472,7 +479,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onToggleProperties}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Toggle Properties"
           >
             <Settings className="w-4 h-4" />
@@ -482,7 +489,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onToggleComments}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Toggle Comments"
           >
             <MessageSquare className="w-4 h-4" />
@@ -509,7 +516,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Undo (Ctrl+Z)"
           >
             <Undo className="w-4 h-4" />
@@ -518,7 +525,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Redo (Ctrl+Y)"
           >
             <Redo className="w-4 h-4" />
@@ -529,7 +536,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Export"
           >
             <Download className="w-4 h-4" />
@@ -538,7 +545,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition-colors"
             title="Share"
           >
             <Share2 className="w-4 h-4" />

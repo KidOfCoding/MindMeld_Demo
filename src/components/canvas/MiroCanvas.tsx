@@ -79,7 +79,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
   const [connectorMode, setConnectorMode] = useState<'none' | 'creating' | 'connecting'>('none');
   const [connectorStart, setConnectorStart] = useState<{ objectId: string; point: Point } | null>(null);
   const [hoveredObject, setHoveredObject] = useState<string | null>(null);
-  const [isToolActive, setIsToolActive] = useState(false);
 
   // Initialize default tool
   useEffect(() => {
@@ -127,49 +126,21 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     setConnectorMode('none');
     setConnectorStart(null);
     setIsEditingText(null);
-    setIsToolActive(false);
-    // Auto-switch to select tool when done
+    // Always return to select tool on escape
     setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' });
   });
 
-  // Tool shortcuts with auto-deactivation
-  useHotkeys('v', () => {
-    setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' });
-    setIsToolActive(false);
-  });
+  // Tool shortcuts - NO auto-switching behavior
+  useHotkeys('v', () => setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' }));
   useHotkeys('h', () => setActiveTool({ id: 'hand', name: 'Hand', icon: null, cursor: 'grab', category: 'select' }));
-  useHotkeys('t', () => {
-    setActiveTool({ id: 'text', name: 'Text', icon: null, cursor: 'text', category: 'text' });
-    setIsToolActive(true);
-  });
-  useHotkeys('r', () => {
-    setActiveTool({ id: 'rectangle', name: 'Rectangle', icon: null, cursor: 'crosshair', category: 'shape' });
-    setIsToolActive(true);
-  });
-  useHotkeys('o', () => {
-    setActiveTool({ id: 'circle', name: 'Circle', icon: null, cursor: 'crosshair', category: 'shape' });
-    setIsToolActive(true);
-  });
-  useHotkeys('l', () => {
-    setActiveTool({ id: 'line', name: 'Line', icon: null, cursor: 'crosshair', category: 'draw' });
-    setIsToolActive(true);
-  });
-  useHotkeys('s', () => {
-    setActiveTool({ id: 'sticky', name: 'Sticky Note', icon: null, cursor: 'crosshair', category: 'text' });
-    setIsToolActive(true);
-  });
-  useHotkeys('p', () => {
-    setActiveTool({ id: 'pen', name: 'Pen', icon: null, cursor: 'crosshair', category: 'draw' });
-    setIsToolActive(true);
-  });
-  useHotkeys('a', () => {
-    setActiveTool({ id: 'arrow', name: 'Arrow', icon: null, cursor: 'crosshair', category: 'connector' });
-    setIsToolActive(true);
-  });
-  useHotkeys('e', () => {
-    setActiveTool({ id: 'eraser', name: 'Eraser', icon: null, cursor: 'crosshair', category: 'draw' });
-    setIsToolActive(true);
-  });
+  useHotkeys('t', () => setActiveTool({ id: 'text', name: 'Text', icon: null, cursor: 'text', category: 'text' }));
+  useHotkeys('r', () => setActiveTool({ id: 'rectangle', name: 'Rectangle', icon: null, cursor: 'crosshair', category: 'shape' }));
+  useHotkeys('o', () => setActiveTool({ id: 'circle', name: 'Circle', icon: null, cursor: 'crosshair', category: 'shape' }));
+  useHotkeys('l', () => setActiveTool({ id: 'line', name: 'Line', icon: null, cursor: 'crosshair', category: 'draw' }));
+  useHotkeys('s', () => setActiveTool({ id: 'sticky', name: 'Sticky Note', icon: null, cursor: 'crosshair', category: 'text' }));
+  useHotkeys('p', () => setActiveTool({ id: 'pen', name: 'Pen', icon: null, cursor: 'crosshair', category: 'draw' }));
+  useHotkeys('a', () => setActiveTool({ id: 'arrow', name: 'Arrow', icon: null, cursor: 'crosshair', category: 'connector' }));
+  useHotkeys('e', () => setActiveTool({ id: 'eraser', name: 'Eraser', icon: null, cursor: 'crosshair', category: 'draw' }));
   useHotkeys('ctrl+0, cmd+0', resetViewport);
   useHotkeys('ctrl+1, cmd+1', fitToScreen);
 
@@ -252,24 +223,18 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       clearSelection();
       
       // Handle tool-specific actions only on empty space
-      if (activeTool && !isCreatingShape && isToolActive) {
+      if (activeTool) {
         switch (activeTool.id) {
           case 'sticky':
             addStickyNote(canvasPos);
-            // Auto-switch back to select after creating
-            setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' });
-            setIsToolActive(false);
             break;
           case 'text':
             addTextBox(canvasPos);
-            // Auto-switch back to select after creating
-            setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' });
-            setIsToolActive(false);
             break;
         }
       }
     }
-  }, [activeTool, clearSelection, isCreatingShape, isToolActive]);
+  }, [activeTool, clearSelection]);
 
   // Handle stage mouse down
   const handleStageMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -293,14 +258,14 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     }
 
     // Handle pen tool
-    if (activeTool?.id === 'pen' && isToolActive) {
+    if (activeTool?.id === 'pen') {
       setIsDrawing(true);
       setCurrentPath([canvasPos.x, canvasPos.y]);
       return;
     }
 
-    // Handle eraser tool - improved functionality
-    if (activeTool?.id === 'eraser' && isToolActive) {
+    // Handle eraser tool - IMPROVED: Works on any object click
+    if (activeTool?.id === 'eraser') {
       const clickedObject = e.target;
       if (clickedObject !== stage) {
         const objectId = clickedObject.id();
@@ -311,8 +276,8 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
-    // Handle connector tool
-    if (activeTool?.id === 'connector' && isToolActive) {
+    // Handle connector tool - SMART CONNECTOR
+    if (activeTool?.id === 'connector') {
       const clickedObject = e.target;
       if (clickedObject !== stage && clickedObject.id()) {
         if (connectorMode === 'none') {
@@ -329,26 +294,23 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
           });
           setConnectorMode('none');
           setConnectorStart(null);
-          // Auto-switch back to select
-          setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' });
-          setIsToolActive(false);
         }
       }
       return;
     }
 
     // Handle shape creation tools
-    if (activeTool && ['rectangle', 'circle', 'triangle', 'diamond', 'star', 'line', 'arrow'].includes(activeTool.id) && e.target === stage && isToolActive) {
+    if (activeTool && ['rectangle', 'circle', 'triangle', 'diamond', 'star', 'line', 'arrow'].includes(activeTool.id) && e.target === stage) {
       setIsCreatingShape(true);
       setShapeStartPos(canvasPos);
       return;
     }
 
-    // Handle selection box
+    // Handle selection box - PARTIAL SELECTION
     if (activeTool?.id === 'select' && e.target === stage) {
       setSelectionBox({ start: canvasPos, end: canvasPos });
     }
-  }, [isSpacePressed, activeTool, connectorMode, connectorStart, deleteObjects, isToolActive]);
+  }, [isSpacePressed, activeTool, connectorMode, connectorStart, deleteObjects]);
 
   // Handle stage mouse move
   const handleStageMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -378,7 +340,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
-    // Handle shape creation with proper preview
+    // Handle shape creation with PERFECT preview positioning
     if (isCreatingShape && shapeStartPos && activeTool) {
       const width = Math.abs(canvasPos.x - shapeStartPos.x);
       const height = Math.abs(canvasPos.y - shapeStartPos.y);
@@ -397,7 +359,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       return;
     }
 
-    // Handle selection box
+    // Handle selection box - PARTIAL SELECTION
     if (selectionBox) {
       setSelectionBox(prev => prev ? { ...prev, end: canvasPos } : null);
     }
@@ -449,7 +411,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       setIsDrawing(false);
     }
 
-    // Handle shape creation completion
+    // Handle shape creation completion - NO auto-switching
     if (isCreatingShape && shapeStartPos && tempShape && activeTool) {
       const width = Math.max(tempShape.width, 10);
       const height = Math.max(tempShape.height, 10);
@@ -515,13 +477,10 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       setIsCreatingShape(false);
       setShapeStartPos(null);
       setTempShape(null);
-      
-      // Auto-switch back to select tool after creating shape
-      setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' });
-      setIsToolActive(false);
+      // NO auto-switching - keep current tool active
     }
 
-    // Handle selection box
+    // Handle selection box - PARTIAL SELECTION
     if (selectionBox) {
       const box = selectionBox;
       const selectedObjects = canvasState.objects.filter(obj => {
@@ -539,11 +498,12 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
           height: Math.abs(box.end.y - box.start.y)
         };
 
+        // Partial selection - object just needs to intersect with selection box
         return (
-          objBounds.x >= selectionBounds.x &&
-          objBounds.y >= selectionBounds.y &&
-          objBounds.x + objBounds.width <= selectionBounds.x + selectionBounds.width &&
-          objBounds.y + objBounds.height <= selectionBounds.y + selectionBounds.height
+          objBounds.x < selectionBounds.x + selectionBounds.width &&
+          objBounds.x + objBounds.width > selectionBounds.x &&
+          objBounds.y < selectionBounds.y + selectionBounds.height &&
+          objBounds.y + objBounds.height > selectionBounds.y
         );
       });
 
@@ -565,20 +525,20 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     setContextMenu({ x: pos.x, y: pos.y });
   }, []);
 
-  // Handle double click for text editing
+  // Handle double click for text editing - WORKS ON ANY OBJECT
   const handleDoubleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     const target = e.target;
-    if (target.id() && (target.getClassName() === 'Group' || target.getClassName() === 'Text')) {
+    if (target.id()) {
       const objectId = target.id();
       const obj = canvasState.objects.find(o => o.id === objectId);
-      if (obj && (obj.type === 'text' || obj.type === 'sticky')) {
+      if (obj && (obj.type === 'text' || obj.type === 'sticky' || obj.type === 'shape')) {
         setIsEditingText(objectId);
         createTextEditor(obj);
       }
     }
   }, [canvasState.objects]);
 
-  // Create text editor
+  // Create text editor - IMPROVED
   const createTextEditor = (obj: CanvasObject) => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -601,16 +561,17 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     textarea.style.fontSize = (obj.style.fontSize || 16) + 'px';
     textarea.style.fontFamily = obj.style.fontFamily || 'Arial';
     textarea.style.border = '2px solid #3B82F6';
-    textarea.style.padding = obj.type === 'sticky' ? '10px' : '0px';
+    textarea.style.padding = obj.type === 'sticky' ? '10px' : '5px';
     textarea.style.margin = '0px';
     textarea.style.overflow = 'hidden';
-    textarea.style.background = obj.type === 'sticky' ? (obj.style.fill || '#FFE066') : 'transparent';
+    textarea.style.background = obj.type === 'sticky' ? (obj.style.fill || '#FFE066') : 'rgba(255,255,255,0.95)';
     textarea.style.outline = 'none';
     textarea.style.resize = 'none';
     textarea.style.lineHeight = '1.2';
     textarea.style.color = obj.style.textColor || obj.style.fill || '#000000';
     textarea.style.borderRadius = obj.type === 'sticky' ? '8px' : '4px';
     textarea.style.zIndex = '1000';
+    textarea.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
 
     textarea.focus();
     textarea.select();
@@ -721,7 +682,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     }
   }, [deleteObjects, canvasState.objects]);
 
-  // Update transformer when selection changes
+  // Update transformer when selection changes - FIXED RESIZING
   useEffect(() => {
     const transformer = transformerRef.current;
     const stage = stageRef.current;
@@ -736,12 +697,11 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     transformer.getLayer()?.batchDraw();
   }, [canvasState.selectedIds]);
 
-  // Handle tool change with proper state management
+  // Handle tool change - PERFECT BEHAVIOR
   const handleToolChange = useCallback((tool: Tool) => {
     // If clicking the same tool that's already active, deactivate it and switch to select
-    if (activeTool?.id === tool.id && isToolActive) {
+    if (activeTool?.id === tool.id && tool.id !== 'select') {
       setActiveTool({ id: 'select', name: 'Select', icon: null, cursor: 'default', category: 'select' });
-      setIsToolActive(false);
       setIsCreatingShape(false);
       setTempShape(null);
       setShapeStartPos(null);
@@ -749,7 +709,6 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       setConnectorStart(null);
     } else {
       setActiveTool(tool);
-      setIsToolActive(tool.id !== 'select' && tool.id !== 'hand');
       
       // Reset any ongoing operations
       setIsCreatingShape(false);
@@ -758,9 +717,9 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       setConnectorMode('none');
       setConnectorStart(null);
     }
-  }, [activeTool, isToolActive]);
+  }, [activeTool]);
 
-  // Render temporary shape during creation with proper positioning
+  // Render temporary shape during creation with PERFECT positioning
   const renderTempShape = () => {
     if (!tempShape || !isCreatingShape) return null;
 
@@ -857,7 +816,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
     }
   };
 
-  // Render canvas objects
+  // Render canvas objects - FIXED RESIZING ISSUE
   const renderObjects = () => {
     return canvasState.objects.map(obj => {
       const key = obj.id;
@@ -890,13 +849,14 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         const scaleX = node.scaleX();
         const scaleY = node.scaleY();
 
+        // FIXED: Proper scaling without making objects tiny
         node.scaleX(1);
         node.scaleY(1);
 
         updateObject(obj.id, {
           size: {
-            width: Math.max(5, node.width() * scaleX),
-            height: Math.max(5, node.height() * scaleY)
+            width: Math.max(10, node.width() * scaleX), // Minimum size
+            height: Math.max(10, node.height() * scaleY)
           },
           transform: {
             ...obj.transform,
@@ -995,6 +955,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               rotation={obj.transform.rotation}
               draggable={isDraggable}
               onClick={handleObjectClick}
+              onDblClick={handleDoubleClick}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
             >
@@ -1072,6 +1033,22 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
                   shadowBlur={isSelected ? 8 : isHovered ? 6 : 0}
                   shadowOffset={{ x: 2, y: 2 }}
                   shadowOpacity={0.3}
+                />
+              )}
+              
+              {/* Text inside shapes */}
+              {obj.content && !isEditingText && (
+                <Text
+                  text={obj.content}
+                  x={10}
+                  y={obj.size.height / 2 - 10}
+                  width={obj.size.width - 20}
+                  fontSize={obj.style.fontSize || 14}
+                  fontFamily={obj.style.fontFamily || 'Arial'}
+                  fill={obj.style.textColor || '#FFFFFF'}
+                  align="center"
+                  verticalAlign="middle"
+                  wrap="word"
                 />
               )}
             </Group>
@@ -1158,7 +1135,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         connectorMode={connectorMode}
         onConnectorModeChange={setConnectorMode}
         onClearAll={clearAllCanvas}
-        isToolActive={isToolActive}
+        isToolActive={activeTool?.id !== 'select' && activeTool?.id !== 'hand'}
       />
 
       {/* Main Canvas */}
@@ -1237,11 +1214,12 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               />
             )}
 
-            {/* Transformer for selected objects */}
+            {/* Transformer for selected objects - FIXED */}
             <Transformer
               ref={transformerRef}
               boundBoxFunc={(oldBox, newBox) => {
-                if (newBox.width < 5 || newBox.height < 5) {
+                // Prevent objects from becoming too small
+                if (newBox.width < 10 || newBox.height < 10) {
                   return oldBox;
                 }
                 return newBox;
@@ -1254,6 +1232,7 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
               anchorStroke="#FFFFFF"
               anchorStrokeWidth={2}
               anchorSize={8}
+              keepRatio={false}
             />
           </Layer>
         </Stage>
@@ -1340,17 +1319,19 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center space-y-4 bg-white/90 p-8 rounded-xl shadow-lg">
             <h3 className="text-xl font-semibold text-gray-700">
-              Welcome to MindMeld Canvas
+              Professional Miro-like Canvas
             </h3>
             <div className="text-gray-600 space-y-2">
-              <p>• Double-click any object to edit text</p>
-              <p>• Click and drag to create shapes</p>
-              <p>• Use the pen tool to draw freely</p>
-              <p>• Eraser tool removes objects on click</p>
-              <p>• All shapes: rectangle, circle, triangle, diamond, star</p>
-              <p>• Smart connectors link objects together</p>
-              <p>• Hold Space or use Hand tool to pan</p>
-              <p>• Click same tool again to deactivate and return to select</p>
+              <p>• <strong>Double-click any object</strong> to edit text (including shapes!)</p>
+              <p>• <strong>Drag to create shapes</strong> with perfect preview</p>
+              <p>• <strong>Pen tool</strong> for free drawing</p>
+              <p>• <strong>Eraser</strong> removes objects on click</p>
+              <p>• <strong>Smart connector</strong> links objects (click object A, then B)</p>
+              <p>• <strong>Partial selection</strong> with selection box</p>
+              <p>• <strong>Properties panel</strong> auto-opens when selecting</p>
+              <p>• <strong>Click same tool again</strong> to deactivate</p>
+              <p>• <strong>Hold Space</strong> or use Hand tool to pan</p>
+              <p>• <strong>All shapes resize properly</strong> without becoming tiny</p>
             </div>
           </div>
         </div>
@@ -1359,11 +1340,11 @@ export const MiroCanvas: React.FC<MiroCanvasProps> = ({
       {/* Status Messages */}
       {connectorMode === 'creating' && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-          Click on another object to create a connection
+          Click on another object to create a smart connection
         </div>
       )}
 
-      {isToolActive && activeTool && activeTool.id !== 'select' && activeTool.id !== 'hand' && (
+      {activeTool && activeTool.id !== 'select' && activeTool.id !== 'hand' && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
           {activeTool.name} tool active - Click same tool again to deactivate
         </div>
