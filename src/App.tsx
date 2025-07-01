@@ -29,7 +29,7 @@ function App() {
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
   const [isCollaboratorPanelOpen, setIsCollaboratorPanelOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(false); // Changed to false for demo
+  const [showWelcome, setShowWelcome] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [canvasHeight, setCanvasHeight] = useState(0);
@@ -132,7 +132,7 @@ function App() {
     }
   }, [currentSessionId]);
 
-  // Calculate canvas dimensions
+  // Calculate canvas dimensions with proper z-index management
   useEffect(() => {
     const updateCanvasSize = () => {
       const currentSidebarWidth = isSidebarExpanded ? sidebarWidth : 0;
@@ -151,10 +151,17 @@ function App() {
     return () => window.removeEventListener('resize', updateCanvasSize);
   }, [isSidebarExpanded, sidebarWidth, isAIPanelOpen, isCollaboratorPanelOpen]);
 
-  // Demo event listeners
+  // Demo event listeners with proper panel management
   useEffect(() => {
-    const handleDemoOpenAIPanel = () => setIsAIPanelOpen(true);
-    const handleDemoOpenCommentsPanel = () => setIsCollaboratorPanelOpen(true);
+    const handleDemoOpenAIPanel = () => {
+      setIsCollaboratorPanelOpen(false); // Close other panels first
+      setTimeout(() => setIsAIPanelOpen(true), 100);
+    };
+    
+    const handleDemoOpenCommentsPanel = () => {
+      setIsAIPanelOpen(false); // Close other panels first
+      setTimeout(() => setIsCollaboratorPanelOpen(true), 100);
+    };
 
     document.addEventListener('demo-open-ai-panel', handleDemoOpenAIPanel);
     document.addEventListener('demo-open-comments-panel', handleDemoOpenCommentsPanel);
@@ -166,7 +173,6 @@ function App() {
   }, []);
 
   const handleExportCanvas = (format: 'png' | 'pdf') => {
-    // Export functionality will be implemented in the canvas component
     console.log('Exporting canvas as', format);
   };
 
@@ -201,34 +207,59 @@ function App() {
     return sessions.find(s => s.id === currentSessionId);
   };
 
+  // Handle panel toggles with proper z-index management
+  const handleToggleAI = () => {
+    if (isAIPanelOpen) {
+      setIsAIPanelOpen(false);
+    } else {
+      setIsCollaboratorPanelOpen(false); // Close other panels
+      setTimeout(() => setIsAIPanelOpen(true), 100);
+    }
+  };
+
+  const handleToggleCollaborators = () => {
+    if (isCollaboratorPanelOpen) {
+      setIsCollaboratorPanelOpen(false);
+    } else {
+      setIsAIPanelOpen(false); // Close other panels
+      setTimeout(() => setIsCollaboratorPanelOpen(true), 100);
+    }
+  };
+
   return (
     <DemoModeWrapper>
       <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
-        <Navbar 
-          onToggleAI={() => setIsAIPanelOpen(!isAIPanelOpen)}
-          onToggleCollaborators={() => setIsCollaboratorPanelOpen(!isCollaboratorPanelOpen)}
-          isAIPanelOpen={isAIPanelOpen}
-          isCollaboratorPanelOpen={isCollaboratorPanelOpen}
-          currentUser={currentUser}
-          onExportCanvas={handleExportCanvas}
-          sessions={sessions}
-          currentSessionId={currentSessionId}
-          onSessionSwitch={handleSessionSwitch}
-        />
-        
-        <div className="flex-1 flex overflow-hidden">
-          <Sidebar 
-            isExpanded={isSidebarExpanded}
-            onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
-            width={sidebarWidth}
+        {/* Navbar - Z-Index 50 */}
+        <div style={{ zIndex: 50 }}>
+          <Navbar 
+            onToggleAI={handleToggleAI}
+            onToggleCollaborators={handleToggleCollaborators}
+            isAIPanelOpen={isAIPanelOpen}
+            isCollaboratorPanelOpen={isCollaboratorPanelOpen}
+            currentUser={currentUser}
+            onExportCanvas={handleExportCanvas}
             sessions={sessions}
             currentSessionId={currentSessionId}
             onSessionSwitch={handleSessionSwitch}
-            onNewSession={handleNewSession}
           />
+        </div>
+        
+        <div className="flex-1 flex overflow-hidden relative">
+          {/* Sidebar - Z-Index 40 */}
+          <div style={{ zIndex: 40 }}>
+            <Sidebar 
+              isExpanded={isSidebarExpanded}
+              onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
+              width={sidebarWidth}
+              sessions={sessions}
+              currentSessionId={currentSessionId}
+              onSessionSwitch={handleSessionSwitch}
+              onNewSession={handleNewSession}
+            />
+          </div>
           
-          {/* Main Canvas Area */}
-          <div className="flex-1 relative">
+          {/* Main Canvas Area - Z-Index 10 */}
+          <div className="flex-1 relative" style={{ zIndex: 10 }}>
             <MiroCanvas
               width={canvasWidth}
               height={canvasHeight}
@@ -237,36 +268,48 @@ function App() {
             />
           </div>
           
+          {/* AI Panel - Z-Index 45 */}
           <AnimatePresence>
             {isAIPanelOpen && (
-              <AIInsightPanel 
-                ideas={ideas}
-                onClose={() => setIsAIPanelOpen(false)}
-              />
+              <div style={{ zIndex: 45 }}>
+                <AIInsightPanel 
+                  ideas={ideas}
+                  onClose={() => setIsAIPanelOpen(false)}
+                />
+              </div>
             )}
           </AnimatePresence>
           
+          {/* Collaborator Panel - Z-Index 44 */}
           <AnimatePresence>
             {isCollaboratorPanelOpen && (
-              <CollaboratorPanel 
-                collaborators={collaborators}
-                currentUser={currentUser}
-                onClose={() => setIsCollaboratorPanelOpen(false)}
-              />
+              <div style={{ zIndex: 44 }}>
+                <CollaboratorPanel 
+                  collaborators={collaborators}
+                  currentUser={currentUser}
+                  onClose={() => setIsCollaboratorPanelOpen(false)}
+                />
+              </div>
             )}
           </AnimatePresence>
         </div>
         
-        <StatusBar 
-          ideas={ideas}
-          collaborators={collaborators}
-          selectedTool="select"
-          currentSession={getCurrentSession()}
-        />
+        {/* Status Bar - Z-Index 30 */}
+        <div style={{ zIndex: 30 }}>
+          <StatusBar 
+            ideas={ideas}
+            collaborators={collaborators}
+            selectedTool="select"
+            currentSession={getCurrentSession()}
+          />
+        </div>
         
+        {/* Welcome Modal - Z-Index 60 */}
         <AnimatePresence>
           {showWelcome && (
-            <WelcomeModal onClose={() => setShowWelcome(false)} />
+            <div style={{ zIndex: 60 }}>
+              <WelcomeModal onClose={() => setShowWelcome(false)} />
+            </div>
           )}
         </AnimatePresence>
       </div>
