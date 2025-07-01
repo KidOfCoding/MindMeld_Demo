@@ -57,7 +57,7 @@ interface DemoStep {
 }
 
 interface DemoAction {
-  type: 'cursor' | 'click' | 'type' | 'highlight' | 'panel' | 'wait' | 'idea' | 'vote' | 'comment' | 'session' | 'close-panel' | 'emoji' | 'ai-prompt' | 'mermaid-chart' | 'sidebar-click' | 'search' | 'new-session' | 'canvas-action' | 'ai-insights' | 'ai-team-comment' | 'cleanup' | 'upvote' | 'team-comment';
+  type: 'cursor' | 'click' | 'type' | 'highlight' | 'panel' | 'wait' | 'idea' | 'vote' | 'comment' | 'session' | 'close-panel' | 'emoji' | 'ai-prompt' | 'mermaid-chart' | 'sidebar-click' | 'search' | 'new-session' | 'canvas-action' | 'ai-insights' | 'ai-team-comment' | 'cleanup';
   target?: string;
   position?: { x: number; y: number };
   text?: string;
@@ -92,7 +92,6 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
   const [autoIdeas, setAutoIdeas] = useState<any[]>([]);
   const [demoComments, setDemoComments] = useState<any[]>([]);
   const [emojiReactions, setEmojiReactions] = useState<any[]>([]);
-  const [upvoteAnimations, setUpvoteAnimations] = useState<any[]>([]);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [aiPromptText, setAiPromptText] = useState('');
   const [showMermaidChart, setShowMermaidChart] = useState(false);
@@ -101,12 +100,11 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [newSessionModal, setNewSessionModal] = useState(false);
   const [canvasShapes, setCanvasShapes] = useState<any[]>([]);
-  const [innovationDiagram, setInnovationDiagram] = useState<any[]>([]);
-  const [strategyDiagram, setStrategyDiagram] = useState<any[]>([]);
   const [openPanels, setOpenPanels] = useState<string[]>([]);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [aiInsightsData, setAiInsightsData] = useState<any>(null);
   const [showDecisionPopup, setShowDecisionPopup] = useState(false);
+  const [voteAnimations, setVoteAnimations] = useState<any[]>([]);
   
   const demoRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -134,120 +132,118 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
       id: 'startup-intro',
       title: '🚀 MindMeld Enterprise - AI Collaboration Platform',
       description: 'Professional startup introduction with initial strategy diagram',
-      duration: 8000,
-      narration: 'Welcome to MindMeld Enterprise - the revolutionary AI-powered collaboration platform that transforms how teams ideate and make decisions.',
+      duration: 12000,
+      narration: 'Welcome to MindMeld Enterprise - the revolutionary AI-powered collaboration platform that transforms how teams ideate and make strategic decisions together.',
       actions: [
-        { type: 'highlight', target: 'navbar', delay: 500, duration: 1500 },
-        { type: 'canvas-action', target: 'create-strategy-diagram', delay: 2000 },
-        { type: 'cursor', position: { x: 400, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 5500 },
-        { type: 'cursor', position: { x: 600, y: 400 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 6000 },
-        { type: 'cleanup', target: 'cursors', delay: 7500 },
-        { type: 'cleanup', target: 'strategy-diagram', delay: 7800 }
+        { type: 'highlight', target: 'navbar', delay: 1000, duration: 2000 },
+        { type: 'canvas-action', target: 'create-strategy-diagram', delay: 3000 },
+        { type: 'cursor', position: { x: 400, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 8000 },
+        { type: 'cursor', position: { x: 600, y: 400 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 8500 },
+        { type: 'cleanup', target: 'cursors', delay: 11500 }
       ]
     },
     {
       id: 'sidebar-exploration',
       title: '📂 Complete Sidebar Navigation',
       description: 'Exploring sidebar sections with AI assistance',
-      duration: 10000,
-      narration: 'Let me show you our comprehensive sidebar navigation. Each section contains powerful features for different aspects of collaboration.',
+      duration: 12000,
+      narration: 'Let me show you our comprehensive sidebar navigation system. Each section contains powerful features designed for different aspects of professional collaboration.',
       actions: [
-        { type: 'sidebar-click', target: 'current-session', delay: 500, duration: 1000 },
-        { type: 'sidebar-click', target: 'recent-sessions', delay: 2000, duration: 1000 },
-        { type: 'search', text: 'Product Strategy', delay: 3500 },
-        { type: 'ai-team-comment', position: { x: 500, y: 200 }, text: 'I found 3 relevant sessions matching your search criteria.', user: 'AI Assistant', delay: 4000 },
-        { type: 'sidebar-click', target: 'templates', delay: 6500, duration: 1000 },
-        { type: 'cleanup', target: 'all', delay: 9500 }
+        { type: 'sidebar-click', target: 'current-session', delay: 1000, duration: 1500 },
+        { type: 'sidebar-click', target: 'recent-sessions', delay: 3000, duration: 1500 },
+        { type: 'search', text: 'Product Strategy', delay: 5000 },
+        { type: 'ai-team-comment', position: { x: 500, y: 200 }, text: 'I found 3 relevant sessions matching your search criteria.', user: 'AI Assistant', delay: 6000 },
+        { type: 'sidebar-click', target: 'templates', delay: 8500, duration: 1500 },
+        { type: 'cleanup', target: 'all', delay: 11500 }
       ]
     },
     {
       id: 'new-session-creation',
-      title: '🎯 New Session Creation & Innovation Hub',
-      description: 'Creating a new session with AI Innovation diagram that stays throughout',
-      duration: 8000,
-      narration: 'Now I will create a new collaboration session. Watch as we set up a fresh workspace with our AI Innovation Hub that will guide our entire session.',
+      title: '🎯 New Session Creation & Canvas',
+      description: 'Creating a new session with AI Innovation diagram',
+      duration: 10000,
+      narration: 'Now I will create a new collaboration session and set up a fresh workspace for our team to work on AI innovation strategies.',
       actions: [
-        { type: 'new-session', delay: 500 },
-        { type: 'type', text: 'AI Innovation Workshop 2024', delay: 2000 },
-        { type: 'click', target: 'create-session-btn', delay: 3500 },
-        { type: 'canvas-action', target: 'create-innovation-diagram', delay: 5000 },
-        { type: 'cleanup', target: 'modals', delay: 7500 }
+        { type: 'new-session', delay: 1000 },
+        { type: 'type', text: 'AI Innovation Workshop 2024', delay: 3000 },
+        { type: 'click', target: 'create-session-btn', delay: 4500 },
+        { type: 'cleanup', target: 'strategy-diagram', delay: 6000 }, // Strategy diagram vanishes here
+        { type: 'canvas-action', target: 'create-innovation-diagram', delay: 6500 }, // Innovation diagram appears
+        { type: 'cleanup', target: 'modals', delay: 9500 }
       ]
     },
     {
       id: 'canvas-collaboration',
       title: '🎨 Advanced Canvas Collaboration',
       description: 'Professional canvas tools with team interaction',
-      duration: 12000,
-      narration: 'Our professional canvas supports real-time collaboration with advanced drawing tools, shapes, and smart connections.',
+      duration: 14000,
+      narration: 'Our professional canvas supports real-time collaboration with advanced drawing tools, shapes, and smart connections for comprehensive visual planning.',
       actions: [
-        { type: 'canvas-action', target: 'create-rectangle', position: { x: 300, y: 200 }, delay: 500 },
-        { type: 'canvas-action', target: 'add-text', text: 'User Research', position: { x: 300, y: 200 }, delay: 1500 },
-        { type: 'cursor', position: { x: 500, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 2500 },
-        { type: 'canvas-action', target: 'create-circle', position: { x: 500, y: 300 }, delay: 3000 },
-        { type: 'canvas-action', target: 'add-text', text: 'AI Analysis', position: { x: 500, y: 300 }, delay: 3500 },
-        { type: 'cursor', position: { x: 700, y: 250 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 6000 },
-        { type: 'canvas-action', target: 'create-diamond', position: { x: 700, y: 250 }, delay: 6500 },
-        { type: 'canvas-action', target: 'add-text', text: 'Decision', position: { x: 700, y: 250 }, delay: 7000 },
-        { type: 'canvas-action', target: 'connect-shapes', delay: 8500 },
-        { type: 'cleanup', target: 'cursors', delay: 11500 },
-        { type: 'cleanup', target: 'canvas-shapes', delay: 11800 }
+        { type: 'canvas-action', target: 'create-rectangle', position: { x: 300, y: 200 }, delay: 1000 },
+        { type: 'canvas-action', target: 'add-text', text: 'User Research', position: { x: 300, y: 200 }, delay: 2000 },
+        { type: 'cursor', position: { x: 500, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 3500 },
+        { type: 'canvas-action', target: 'create-circle', position: { x: 500, y: 300 }, delay: 4000 },
+        { type: 'canvas-action', target: 'add-text', text: 'AI Analysis', position: { x: 500, y: 300 }, delay: 4500 },
+        { type: 'cursor', position: { x: 700, y: 250 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 7000 },
+        { type: 'canvas-action', target: 'create-diamond', position: { x: 700, y: 250 }, delay: 7500 },
+        { type: 'canvas-action', target: 'add-text', text: 'Decision', position: { x: 700, y: 250 }, delay: 8000 },
+        { type: 'canvas-action', target: 'connect-shapes', delay: 10000 },
+        { type: 'cleanup', target: 'canvas-shapes', delay: 12000 }, // Canvas shapes vanish here
+        { type: 'cleanup', target: 'cursors', delay: 13500 }
       ]
     },
     {
       id: 'collaboration-panel',
       title: '👥 Team Collaboration with Voting & Reactions',
       description: 'Collaboration panel with voting, comments, and emoji reactions',
-      duration: 12000,
-      narration: 'Our collaboration panel enables rich team interaction with voting, emoji reactions, real-time chat, and comprehensive team management.',
+      duration: 15000,
+      narration: 'Our collaboration panel enables rich team interaction with voting, emoji reactions, real-time chat, and comprehensive team management for effective decision making.',
       actions: [
-        { type: 'panel', target: 'collaboration-panel', delay: 500 },
-        { type: 'idea', position: { x: 200, y: 150 }, text: 'Implement AI-powered user onboarding', user: 'Sarah Chen', delay: 1500 },
-        { type: 'upvote', target: 'idea-1', user: 'Marcus Rodriguez', delay: 2500 },
-        { type: 'team-comment', position: { x: 250, y: 180 }, text: 'Great idea! This could really improve user retention.', user: 'Marcus Rodriguez', delay: 3000 },
-        { type: 'upvote', target: 'idea-1', user: 'Emily Watson', delay: 3500 },
-        { type: 'emoji', emoji: '👍', position: { x: 250, y: 150 }, user: 'Emily Watson', delay: 4000 },
-        { type: 'idea', position: { x: 450, y: 200 }, text: 'Mobile-first design system', user: 'Emily Watson', delay: 5500 },
-        { type: 'upvote', target: 'idea-2', user: 'Sarah Chen', delay: 6000 },
-        { type: 'team-comment', position: { x: 500, y: 230 }, text: 'Mobile-first is essential for our target audience.', user: 'Sarah Chen', delay: 6500 },
-        { type: 'upvote', target: 'idea-2', user: 'Marcus Rodriguez', delay: 7000 },
-        { type: 'ai-team-comment', position: { x: 200, y: 180 }, text: 'Based on user data, AI onboarding could increase retention by 40%.', user: 'AI Assistant', delay: 8500 },
-        { type: 'emoji', emoji: '🚀', position: { x: 500, y: 200 }, user: 'Marcus Rodriguez', delay: 9500 },
-        { type: 'cleanup', target: 'emojis', delay: 11500 }
+        { type: 'panel', target: 'collaboration-panel', delay: 1000 },
+        { type: 'idea', position: { x: 200, y: 150 }, text: 'Implement AI-powered user onboarding', user: 'Sarah Chen', delay: 2500 },
+        { type: 'vote', target: 'idea-1', user: 'Marcus Rodriguez', delay: 4000 },
+        { type: 'vote', target: 'idea-1', user: 'Emily Watson', delay: 4500 },
+        { type: 'comment', position: { x: 250, y: 180 }, text: 'Great idea! This aligns perfectly with our user experience goals.', user: 'Marcus Rodriguez', delay: 5500 },
+        { type: 'idea', position: { x: 450, y: 200 }, text: 'Mobile-first design system', user: 'Emily Watson', delay: 7000 },
+        { type: 'vote', target: 'idea-2', user: 'Sarah Chen', delay: 8000 },
+        { type: 'vote', target: 'idea-2', user: 'Marcus Rodriguez', delay: 8500 },
+        { type: 'ai-team-comment', position: { x: 200, y: 210 }, text: 'Based on user data analysis, AI onboarding could increase retention by 40%.', user: 'AI Assistant', delay: 10000 },
+        { type: 'comment', position: { x: 450, y: 230 }, text: 'Mobile-first approach is essential for our target demographic.', user: 'Emily Watson', delay: 11500 },
+        { type: 'cleanup', target: 'comments', delay: 14500 }
       ]
     },
     {
       id: 'ai-insights-complete',
       title: '🧠 Complete AI Analysis & Team AI Insights',
       description: 'AI analysis and comprehensive reports',
-      duration: 14000,
-      narration: 'Watch our advanced AI system analyze all ideas, generate comprehensive insights, and participate as a team member with intelligent suggestions.',
+      duration: 16000,
+      narration: 'Watch our advanced AI system analyze all ideas, generate comprehensive insights, and participate as an intelligent team member with data-driven suggestions.',
       actions: [
-        { type: 'close-panel', target: 'collaboration-panel', delay: 500 },
-        { type: 'panel', target: 'ai-panel', delay: 1000 },
-        { type: 'click', target: 'generate-insights', delay: 2000 },
-        { type: 'wait', delay: 3000 },
-        { type: 'ai-insights', delay: 5000 },
-        { type: 'highlight', target: 'ai-themes', delay: 6000, duration: 1500 },
-        { type: 'ai-team-comment', position: { x: 350, y: 400 }, text: 'I recommend prioritizing the AI onboarding feature - 89% confidence based on market analysis.', user: 'AI Assistant', delay: 9000 },
-        { type: 'highlight', target: 'ai-recommendations', delay: 11000, duration: 1500 },
-        { type: 'cleanup', target: 'highlights', delay: 13500 }
+        { type: 'close-panel', target: 'collaboration-panel', delay: 1000 },
+        { type: 'panel', target: 'ai-panel', delay: 2000 },
+        { type: 'click', target: 'generate-insights', delay: 3500 },
+        { type: 'wait', delay: 4000 },
+        { type: 'ai-insights', delay: 7000 },
+        { type: 'highlight', target: 'ai-themes', delay: 8500, duration: 2000 },
+        { type: 'ai-team-comment', position: { x: 350, y: 400 }, text: 'I recommend prioritizing the AI onboarding feature - 89% confidence based on market analysis.', user: 'AI Assistant', delay: 11000 },
+        { type: 'highlight', target: 'ai-recommendations', delay: 13000, duration: 2000 },
+        { type: 'cleanup', target: 'highlights', delay: 15500 }
       ]
     },
     {
       id: 'decision-finalization',
       title: '✅ Decision Finalization & Export',
       description: 'Complete workflow to final decision with export options',
-      duration: 8000,
-      narration: 'Finally, we finalize our decisions based on team consensus and AI insights, then export our collaborative session for stakeholders.',
+      duration: 10000,
+      narration: 'Finally, we finalize our decisions based on team consensus and AI insights, then export our collaborative session for stakeholders and implementation.',
       actions: [
-        { type: 'cursor', position: { x: 200, y: 150 }, user: 'Project Manager', color: '#8B5CF6', delay: 500 },
-        { type: 'upvote', target: 'idea-1', user: 'Project Manager', delay: 1500 },
-        { type: 'team-comment', position: { x: 250, y: 180 }, text: 'Approved! Let\'s move forward with AI onboarding as our priority.', user: 'Project Manager', delay: 2000 },
-        { type: 'canvas-action', target: 'finalize-decision', delay: 2500 },
-        { type: 'close-panel', target: 'ai-panel', delay: 4000 },
-        { type: 'highlight', target: 'export-button', delay: 5000, duration: 1500 },
-        { type: 'cleanup', target: 'all', delay: 7500 }
+        { type: 'cursor', position: { x: 200, y: 150 }, user: 'Project Manager', color: '#8B5CF6', delay: 1000 },
+        { type: 'vote', target: 'idea-1', user: 'Project Manager', delay: 2000 },
+        { type: 'comment', position: { x: 200, y: 180 }, text: 'Approved! This will be our Q1 priority initiative.', user: 'Project Manager', delay: 3000 },
+        { type: 'canvas-action', target: 'finalize-decision', delay: 4000 },
+        { type: 'close-panel', target: 'ai-panel', delay: 6000 },
+        { type: 'highlight', target: 'export-button', delay: 7500, duration: 2000 },
+        { type: 'cleanup', target: 'all', delay: 9500 }
       ]
     }
   ];
@@ -260,7 +256,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     return () => clearTimeout(timer);
   }, []);
 
-  // Demo progression logic
+  // Demo progression logic with balanced timing
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -275,19 +271,19 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
 
     setCurrentNarration(currentStepData.narration);
     
-    // Voice narration
+    // Voice narration with slower, clearer pace
     if (voiceEnabled && 'speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(currentStepData.narration);
-      utterance.rate = 1.1;
-      utterance.pitch = 1.2;
-      utterance.volume = 0.9;
+      utterance.rate = 0.9; // Slower for clarity
+      utterance.pitch = 1.1;
+      utterance.volume = 0.8;
       speechRef.current = utterance;
       speechSynthesis.speak(utterance);
     }
 
     intervalRef.current = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + (100 / (currentStepData.duration / 80));
+        const newProgress = prev + (100 / (currentStepData.duration / 100)); // Slower progress
         
         if (newProgress >= 100) {
           if (currentStep < demoSteps.length - 1) {
@@ -304,7 +300,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         
         return newProgress;
       });
-    }, 80);
+    }, 100); // Slower interval for better balance
 
     return () => {
       if (intervalRef.current) {
@@ -326,7 +322,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     currentStepData.actions.forEach((action, index) => {
       setTimeout(() => {
         executeAction(action);
-      }, action.delay || index * 800);
+      }, action.delay || index * 1000);
     });
   }, [currentStep, isPlaying]);
 
@@ -361,50 +357,35 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         }
         break;
 
-      case 'upvote':
-        setAutoIdeas(prev => prev.map(idea => 
-          idea.id === action.target 
-            ? { ...idea, votes: idea.votes + 1 }
-            : idea
-        ));
+      case 'vote':
+        const voteEmojis = ['❤️', '👍', '⭐', '🚀', '💯', '🎯', '✨'];
+        const randomEmoji = voteEmojis[Math.floor(Math.random() * voteEmojis.length)];
         
-        // Add upvote animation
-        if (action.user) {
-          const upvoteId = `upvote-${Date.now()}`;
-          setUpvoteAnimations(prev => [...prev, {
-            id: upvoteId,
-            user: action.user,
-            timestamp: new Date()
-          }]);
-          
-          // Remove upvote animation after 2 seconds
-          setTimeout(() => {
-            setUpvoteAnimations(prev => prev.filter(u => u.id !== upvoteId));
-          }, 2000);
-        }
-        break;
-
-      case 'emoji':
-        if (action.emoji && action.position && action.user) {
-          const emojiId = `emoji-${Date.now()}`;
-          setEmojiReactions(prev => [...prev, {
-            id: emojiId,
-            emoji: action.emoji,
-            position: action.position,
-            user: action.user,
-            timestamp: new Date()
-          }]);
-          
-          // Remove emoji after 3 seconds
-          setTimeout(() => {
-            setEmojiReactions(prev => prev.filter(e => e.id !== emojiId));
-          }, 3000);
-        }
+        setAutoIdeas(prev => prev.map(idea => {
+          if (idea.id === action.target) {
+            // Create beautiful vote animation
+            const voteId = `vote-${Date.now()}`;
+            setVoteAnimations(prevVotes => [...prevVotes, {
+              id: voteId,
+              position: { x: idea.position.x + 200, y: idea.position.y + 50 },
+              emoji: randomEmoji,
+              user: action.user,
+              timestamp: new Date()
+            }]);
+            
+            // Remove vote animation after 3 seconds
+            setTimeout(() => {
+              setVoteAnimations(prevVotes => prevVotes.filter(v => v.id !== voteId));
+            }, 3000);
+            
+            return { ...idea, votes: idea.votes + 1 };
+          }
+          return idea;
+        }));
         break;
 
       case 'comment':
       case 'ai-team-comment':
-      case 'team-comment':
         if (action.position && action.text && action.user) {
           const commentId = `comment-${Date.now()}`;
           setDemoComments(prev => [...prev, {
@@ -414,13 +395,13 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             author: action.user,
             timestamp: new Date(),
             isAI: action.type === 'ai-team-comment',
-            isTeam: action.type === 'team-comment'
+            isProjectManager: action.user === 'Project Manager'
           }]);
           
-          // Remove comment after 4 seconds
+          // Remove comment after 5 seconds
           setTimeout(() => {
             setDemoComments(prev => prev.filter(c => c.id !== commentId));
-          }, 4000);
+          }, 5000);
         }
         break;
 
@@ -437,33 +418,34 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             { id: 'strategy-4', type: 'rectangle', position: { x: center.x - 200, y: center.y + 50 }, text: 'Product Vision', color: '#EF4444', width: 120, height: 60 },
             { id: 'strategy-5', type: 'rectangle', position: { x: center.x - 50, y: center.y + 50 }, text: 'Roadmap Planning', color: '#8B5CF6', width: 120, height: 60 },
             { id: 'strategy-6', type: 'rectangle', position: { x: center.x + 100, y: center.y + 50 }, text: 'Success Metrics', color: '#06B6D4', width: 120, height: 60 },
-            // Connections
+            // Horizontal connections
             { id: 'line-h1', type: 'line', startPos: { x: center.x - 80, y: center.y - 70 }, endPos: { x: center.x - 50, y: center.y - 70 }, color: '#6B7280' },
             { id: 'line-h2', type: 'line', startPos: { x: center.x + 70, y: center.y - 70 }, endPos: { x: center.x + 100, y: center.y - 70 }, color: '#6B7280' },
             { id: 'line-h3', type: 'line', startPos: { x: center.x - 80, y: center.y + 80 }, endPos: { x: center.x - 50, y: center.y + 80 }, color: '#6B7280' },
             { id: 'line-h4', type: 'line', startPos: { x: center.x + 70, y: center.y + 80 }, endPos: { x: center.x + 100, y: center.y + 80 }, color: '#6B7280' },
+            // Vertical connections
             { id: 'line-v1', type: 'line', startPos: { x: center.x - 140, y: center.y - 40 }, endPos: { x: center.x - 140, y: center.y + 50 }, color: '#6B7280' },
             { id: 'line-v2', type: 'line', startPos: { x: center.x + 10, y: center.y - 40 }, endPos: { x: center.x + 10, y: center.y + 50 }, color: '#6B7280' },
             { id: 'line-v3', type: 'line', startPos: { x: center.x + 160, y: center.y - 40 }, endPos: { x: center.x + 160, y: center.y + 50 }, color: '#6B7280' }
           ];
-          setStrategyDiagram(strategyShapes);
+          setCanvasShapes(strategyShapes);
         } else if (action.target === 'create-innovation-diagram') {
-          // Create AI Innovation Hub with connections - STAYS TILL END
+          // Create AI Innovation Hub with connections (this stays till end)
           const innovationShapes = [
             // Central AI Hub
-            { id: 'ai-hub', type: 'circle', position: { x: center.x - 50, y: center.y - 50 }, text: 'AI Core', color: '#8B5CF6', width: 100, height: 100 },
+            { id: 'ai-hub', type: 'circle', position: { x: center.x - 50, y: center.y - 50 }, text: 'AI Core', color: '#8B5CF6', width: 100, height: 100, permanent: true },
             // Surrounding innovation areas
-            { id: 'innovation-1', type: 'rectangle', position: { x: center.x - 250, y: center.y - 150 }, text: 'Machine Learning', color: '#3B82F6', width: 120, height: 60 },
-            { id: 'innovation-2', type: 'rectangle', position: { x: center.x + 100, y: center.y - 150 }, text: 'Natural Language', color: '#10B981', width: 120, height: 60 },
-            { id: 'innovation-3', type: 'rectangle', position: { x: center.x - 250, y: center.y + 50 }, text: 'Computer Vision', color: '#F59E0B', width: 120, height: 60 },
-            { id: 'innovation-4', type: 'rectangle', position: { x: center.x + 100, y: center.y + 50 }, text: 'Predictive Analytics', color: '#EF4444', width: 120, height: 60 },
+            { id: 'innovation-1', type: 'rectangle', position: { x: center.x - 250, y: center.y - 150 }, text: 'Machine Learning', color: '#3B82F6', width: 120, height: 60, permanent: true },
+            { id: 'innovation-2', type: 'rectangle', position: { x: center.x + 100, y: center.y - 150 }, text: 'Natural Language', color: '#10B981', width: 120, height: 60, permanent: true },
+            { id: 'innovation-3', type: 'rectangle', position: { x: center.x - 250, y: center.y + 50 }, text: 'Computer Vision', color: '#F59E0B', width: 120, height: 60, permanent: true },
+            { id: 'innovation-4', type: 'rectangle', position: { x: center.x + 100, y: center.y + 50 }, text: 'Predictive Analytics', color: '#EF4444', width: 120, height: 60, permanent: true },
             // Connection lines to hub
-            { id: 'hub-line-1', type: 'line', startPos: { x: center.x - 130, y: center.y - 120 }, endPos: { x: center.x - 30, y: center.y - 30 }, color: '#8B5CF6' },
-            { id: 'hub-line-2', type: 'line', startPos: { x: center.x + 120, y: center.y - 120 }, endPos: { x: center.x + 30, y: center.y - 30 }, color: '#8B5CF6' },
-            { id: 'hub-line-3', type: 'line', startPos: { x: center.x - 130, y: center.y + 80 }, endPos: { x: center.x - 30, y: center.y + 30 }, color: '#8B5CF6' },
-            { id: 'hub-line-4', type: 'line', startPos: { x: center.x + 120, y: center.y + 80 }, endPos: { x: center.x + 30, y: center.y + 30 }, color: '#8B5CF6' }
+            { id: 'hub-line-1', type: 'line', startPos: { x: center.x - 130, y: center.y - 120 }, endPos: { x: center.x - 30, y: center.y - 30 }, color: '#8B5CF6', permanent: true },
+            { id: 'hub-line-2', type: 'line', startPos: { x: center.x + 120, y: center.y - 120 }, endPos: { x: center.x + 30, y: center.y - 30 }, color: '#8B5CF6', permanent: true },
+            { id: 'hub-line-3', type: 'line', startPos: { x: center.x - 130, y: center.y + 80 }, endPos: { x: center.x - 30, y: center.y + 30 }, color: '#8B5CF6', permanent: true },
+            { id: 'hub-line-4', type: 'line', startPos: { x: center.x + 120, y: center.y + 80 }, endPos: { x: center.x + 30, y: center.y + 30 }, color: '#8B5CF6', permanent: true }
           ];
-          setInnovationDiagram(innovationShapes);
+          setCanvasShapes(prev => [...prev.filter(shape => shape.permanent), ...innovationShapes]);
         } else if (action.target === 'create-rectangle' && action.position) {
           setCanvasShapes(prev => [...prev, {
             id: `shape-${Date.now()}`,
@@ -472,7 +454,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             text: '',
             color: '#3B82F6',
             width: 120,
-            height: 60
+            height: 60,
+            temporary: true
           }]);
         } else if (action.target === 'create-circle' && action.position) {
           setCanvasShapes(prev => [...prev, {
@@ -482,7 +465,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             text: '',
             color: '#10B981',
             width: 80,
-            height: 80
+            height: 80,
+            temporary: true
           }]);
         } else if (action.target === 'create-diamond' && action.position) {
           setCanvasShapes(prev => [...prev, {
@@ -492,7 +476,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             text: '',
             color: '#F59E0B',
             width: 80,
-            height: 80
+            height: 80,
+            temporary: true
           }]);
         } else if (action.target === 'add-text' && action.text && action.position) {
           setCanvasShapes(prev => prev.map(shape => 
@@ -508,14 +493,16 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
               type: 'line',
               startPos: { x: 420, y: 230 },
               endPos: { x: 500, y: 330 },
-              color: '#6B7280'
+              color: '#6B7280',
+              temporary: true
             },
             {
               id: `connector-2-${Date.now()}`,
               type: 'line',
               startPos: { x: 580, y: 330 },
               endPos: { x: 700, y: 280 },
-              color: '#6B7280'
+              color: '#6B7280',
+              temporary: true
             }
           ]);
         } else if (action.target === 'finalize-decision') {
@@ -618,9 +605,11 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         } else if (action.target === 'highlights') {
           setHighlightedElement(null);
         } else if (action.target === 'strategy-diagram') {
-          setStrategyDiagram([]);
+          // Remove only strategy diagram shapes
+          setCanvasShapes(prev => prev.filter(shape => !shape.id.startsWith('strategy-') && !shape.id.startsWith('line-')));
         } else if (action.target === 'canvas-shapes') {
-          setCanvasShapes([]);
+          // Remove only temporary canvas shapes, keep permanent innovation diagram
+          setCanvasShapes(prev => prev.filter(shape => !shape.temporary));
         } else if (action.target === 'all') {
           setCursors([]);
           setEmojiReactions([]);
@@ -631,7 +620,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
           setNewSessionModal(false);
           setShowAIPrompt(false);
           setShowMermaidChart(false);
-          // Keep innovation diagram - don't clear it
+          setVoteAnimations([]);
         }
         break;
 
@@ -675,10 +664,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     setAutoIdeas([]);
     setDemoComments([]);
     setEmojiReactions([]);
-    setUpvoteAnimations([]);
     setCanvasShapes([]);
-    setInnovationDiagram([]);
-    setStrategyDiagram([]);
     setOpenPanels([]);
     setHighlightedElement(null);
     setSidebarContent(null);
@@ -688,6 +674,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     setShowMermaidChart(false);
     setAiInsightsData(null);
     setShowDecisionPopup(false);
+    setVoteAnimations([]);
     if (speechRef.current) {
       speechSynthesis.cancel();
     }
@@ -923,104 +910,45 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         ))}
       </AnimatePresence>
 
-      {/* Upvote Animations */}
+      {/* Beautiful Vote Animations */}
       <AnimatePresence>
-        {upvoteAnimations.map((upvote) => (
+        {voteAnimations.map((vote) => (
           <motion.div
-            key={upvote.id}
+            key={vote.id}
             initial={{ opacity: 0, scale: 0.5, y: 0 }}
-            animate={{ opacity: 1, scale: 1.2, y: -40 }}
-            exit={{ opacity: 0, scale: 0.5, y: -80 }}
-            transition={{ duration: 0.8 }}
-            className="absolute pointer-events-none z-[75] flex items-center space-x-1"
+            animate={{ 
+              opacity: [0, 1, 1, 0], 
+              scale: [0.5, 1.5, 1.2, 0.8], 
+              y: [-20, -40, -60, -80],
+              rotate: [0, 10, -5, 0]
+            }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 3, ease: "easeOut" }}
+            className="absolute pointer-events-none z-[75] flex items-center space-x-2"
             style={{
-              left: Math.random() * 200 + 300,
-              top: Math.random() * 100 + 200,
+              left: vote.position.x,
+              top: vote.position.y,
             }}
           >
-            <ThumbsUp className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-bold text-green-600">+1</span>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      {/* Emoji Reactions */}
-      <AnimatePresence>
-        {emojiReactions.map((reaction) => (
-          <motion.div
-            key={reaction.id}
-            initial={{ opacity: 0, scale: 0.5, y: 0 }}
-            animate={{ opacity: 1, scale: 1.2, y: -30 }}
-            exit={{ opacity: 0, scale: 0.5, y: -60 }}
-            transition={{ duration: 0.5 }}
-            className="absolute pointer-events-none z-[75] text-xl"
-            style={{
-              left: reaction.position.x,
-              top: reaction.position.y,
-            }}
-          >
-            {reaction.emoji}
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      {/* Strategy Diagram - Only during startup */}
-      <AnimatePresence>
-        {strategyDiagram.map((shape) => {
-          if (!shape || !shape.id) return null;
-          
-          const position = shape.position || shape.startPos || { x: 0, y: 0 };
-          
-          return (
-            <motion.div
-              key={shape.id}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute pointer-events-none z-[50]"
-              style={{
-                left: position.x,
-                top: position.y,
-              }}
+            <span className="text-2xl">{vote.emoji}</span>
+            <motion.span 
+              className="text-lg font-bold text-green-600"
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{ duration: 0.5 }}
             >
-              {shape.type === 'line' ? (
-                <svg width="200" height="150" className="absolute" style={{ left: -100, top: -75 }}>
-                  <line
-                    x1={shape.startPos ? 100 : 0}
-                    y1={shape.startPos ? 75 : 0}
-                    x2={shape.endPos ? shape.endPos.x - position.x + 100 : 100}
-                    y2={shape.endPos ? shape.endPos.y - position.y + 75 : 100}
-                    stroke={shape.color}
-                    strokeWidth="2"
-                    className="drop-shadow-sm"
-                  />
-                </svg>
-              ) : (
-                <div 
-                  className={`flex items-center justify-center text-white text-xs font-medium shadow-lg ${
-                    shape.type === 'rectangle' ? 'rounded-lg' :
-                    shape.type === 'circle' ? 'rounded-full' :
-                    'transform rotate-45 rounded-lg'
-                  }`}
-                  style={{ 
-                    backgroundColor: shape.color,
-                    width: shape.width || (shape.type === 'circle' ? '80px' : '120px'),
-                    height: shape.height || (shape.type === 'circle' ? '80px' : '60px')
-                  }}
-                >
-                  <span className={shape.type === 'diamond' ? 'transform -rotate-45' : ''}>
-                    {shape.text}
-                  </span>
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
+              +1
+            </motion.span>
+            <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded-full shadow-md">
+              {vote.user}
+            </span>
+          </motion.div>
+        ))}
       </AnimatePresence>
 
-      {/* Innovation Diagram - Stays till end */}
+      {/* Canvas Shapes - Professional Diagrams with Connections */}
       <AnimatePresence>
-        {innovationDiagram.map((shape) => {
+        {canvasShapes.map((shape) => {
+          // Ensure shape has required properties
           if (!shape || !shape.id) return null;
           
           const position = shape.position || shape.startPos || { x: 0, y: 0 };
@@ -1046,60 +974,6 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
                     y2={shape.endPos ? shape.endPos.y - position.y + 75 : 100}
                     stroke={shape.color}
                     strokeWidth="3"
-                    className="drop-shadow-sm"
-                  />
-                </svg>
-              ) : (
-                <div 
-                  className={`flex items-center justify-center text-white text-xs font-medium shadow-lg ${
-                    shape.type === 'rectangle' ? 'rounded-lg' :
-                    shape.type === 'circle' ? 'rounded-full' :
-                    'transform rotate-45 rounded-lg'
-                  }`}
-                  style={{ 
-                    backgroundColor: shape.color,
-                    width: shape.width || (shape.type === 'circle' ? '100px' : '120px'),
-                    height: shape.height || (shape.type === 'circle' ? '100px' : '60px')
-                  }}
-                >
-                  <span className={shape.type === 'diamond' ? 'transform -rotate-45' : ''}>
-                    {shape.text}
-                  </span>
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
-
-      {/* Canvas Shapes - Only during canvas collaboration */}
-      <AnimatePresence>
-        {canvasShapes.map((shape) => {
-          if (!shape || !shape.id) return null;
-          
-          const position = shape.position || shape.startPos || { x: 0, y: 0 };
-          
-          return (
-            <motion.div
-              key={shape.id}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute pointer-events-none z-[50]"
-              style={{
-                left: position.x,
-                top: position.y,
-              }}
-            >
-              {shape.type === 'line' ? (
-                <svg width="200" height="150" className="absolute" style={{ left: -100, top: -75 }}>
-                  <line
-                    x1={shape.startPos ? 100 : 0}
-                    y1={shape.startPos ? 75 : 0}
-                    x2={shape.endPos ? shape.endPos.x - position.x + 100 : 100}
-                    y2={shape.endPos ? shape.endPos.y - position.y + 75 : 100}
-                    stroke={shape.color}
-                    strokeWidth="2"
                     className="drop-shadow-sm"
                   />
                 </svg>
@@ -1141,34 +1015,42 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             }}
           >
             <div className={`max-w-xs border rounded-lg p-2 shadow-lg ${
-              comment.isAI 
-                ? 'bg-purple-50 border-purple-200' 
-                : comment.isTeam
-                  ? 'bg-blue-50 border-blue-200'
-                  : 'bg-white border-gray-200'
+              comment.isProjectManager
+                ? 'bg-green-50 border-green-300'
+                : comment.isAI 
+                  ? 'bg-purple-50 border-purple-200' 
+                  : 'bg-blue-50 border-blue-200'
             }`}>
               <div className="flex items-center space-x-2 mb-1">
                 {comment.isAI ? (
                   <Brain className="w-3 h-3 text-purple-600" />
-                ) : comment.isTeam ? (
-                  <Users className="w-3 h-3 text-blue-600" />
+                ) : comment.isProjectManager ? (
+                  <Crown className="w-3 h-3 text-green-600" />
                 ) : (
                   <MessageSquare className="w-3 h-3 text-blue-600" />
                 )}
                 <span className={`text-xs font-medium ${
-                  comment.isAI ? 'text-purple-700' : comment.isTeam ? 'text-blue-700' : 'text-gray-700'
+                  comment.isProjectManager
+                    ? 'text-green-700'
+                    : comment.isAI 
+                      ? 'text-purple-700' 
+                      : 'text-blue-700'
                 }`}>
                   {comment.author}
                 </span>
                 {comment.isAI && (
                   <span className="text-xs bg-purple-100 text-purple-600 px-1 rounded">AI</span>
                 )}
-                {comment.isTeam && (
-                  <span className="text-xs bg-blue-100 text-blue-600 px-1 rounded">Team</span>
+                {comment.isProjectManager && (
+                  <span className="text-xs bg-green-100 text-green-600 px-1 rounded">PM</span>
                 )}
               </div>
               <p className={`text-xs ${
-                comment.isAI ? 'text-purple-600' : comment.isTeam ? 'text-blue-600' : 'text-gray-600'
+                comment.isProjectManager
+                  ? 'text-green-600'
+                  : comment.isAI 
+                    ? 'text-purple-600' 
+                    : 'text-blue-600'
               }`}>
                 {comment.text}
               </p>
