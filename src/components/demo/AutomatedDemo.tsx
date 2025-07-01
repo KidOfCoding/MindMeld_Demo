@@ -57,7 +57,7 @@ interface DemoStep {
 }
 
 interface DemoAction {
-  type: 'cursor' | 'click' | 'type' | 'highlight' | 'panel' | 'wait' | 'idea' | 'vote' | 'comment' | 'session' | 'close-panel' | 'emoji' | 'ai-prompt' | 'mermaid-chart' | 'sidebar-click' | 'search' | 'new-session' | 'canvas-action' | 'ai-insights' | 'ai-team-comment' | 'cleanup';
+  type: 'cursor' | 'click' | 'type' | 'highlight' | 'panel' | 'wait' | 'idea' | 'vote' | 'comment' | 'session' | 'close-panel' | 'emoji' | 'ai-prompt' | 'mermaid-chart' | 'sidebar-click' | 'search' | 'new-session' | 'canvas-action' | 'ai-insights' | 'ai-team-comment' | 'cleanup' | 'upvote' | 'team-comment';
   target?: string;
   position?: { x: number; y: number };
   text?: string;
@@ -104,6 +104,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [aiInsightsData, setAiInsightsData] = useState<any>(null);
   const [showDecisionPopup, setShowDecisionPopup] = useState(false);
+  const [upvotes, setUpvotes] = useState<any[]>([]);
+  const [teamComments, setTeamComments] = useState<any[]>([]);
   
   const demoRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -138,7 +140,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         { type: 'canvas-action', target: 'create-strategy-diagram', delay: 2000 },
         { type: 'cursor', position: { x: 400, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 5500 },
         { type: 'cursor', position: { x: 600, y: 400 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 6000 },
-        { type: 'cleanup', target: 'cursors', delay: 7500 }
+        { type: 'cleanup', target: 'cursors', delay: 7500 },
+        { type: 'cleanup', target: 'diagrams', delay: 7800 }
       ]
     },
     {
@@ -167,7 +170,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         { type: 'type', text: 'AI Innovation Workshop 2024', delay: 2000 },
         { type: 'click', target: 'create-session-btn', delay: 3500 },
         { type: 'canvas-action', target: 'create-innovation-diagram', delay: 5000 },
-        { type: 'cleanup', target: 'modals', delay: 7500 }
+        { type: 'cleanup', target: 'modals', delay: 7500 },
+        { type: 'cleanup', target: 'diagrams', delay: 7800 }
       ]
     },
     {
@@ -186,26 +190,31 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         { type: 'canvas-action', target: 'create-diamond', position: { x: 700, y: 250 }, delay: 6500 },
         { type: 'canvas-action', target: 'add-text', text: 'Decision', position: { x: 700, y: 250 }, delay: 7000 },
         { type: 'canvas-action', target: 'connect-shapes', delay: 8500 },
-        { type: 'cleanup', target: 'cursors', delay: 11500 }
+        { type: 'cleanup', target: 'cursors', delay: 11500 },
+        { type: 'cleanup', target: 'canvas-shapes', delay: 11800 }
       ]
     },
     {
       id: 'collaboration-panel',
       title: '👥 Team Collaboration with Voting & Reactions',
       description: 'Collaboration panel with voting, comments, and emoji reactions',
-      duration: 12000,
+      duration: 14000,
       narration: 'Our collaboration panel enables rich team interaction with voting, emoji reactions, real-time chat, and comprehensive team management.',
       actions: [
         { type: 'panel', target: 'collaboration-panel', delay: 500 },
         { type: 'idea', position: { x: 200, y: 150 }, text: 'Implement AI-powered user onboarding', user: 'Sarah Chen', delay: 1500 },
-        { type: 'vote', target: 'idea-1', user: 'Marcus Rodriguez', delay: 2500 },
-        { type: 'vote', target: 'idea-1', user: 'Emily Watson', delay: 3000 },
-        { type: 'emoji', emoji: '👍', position: { x: 250, y: 150 }, user: 'Emily Watson', delay: 3500 },
-        { type: 'idea', position: { x: 450, y: 200 }, text: 'Mobile-first design system', user: 'Emily Watson', delay: 5000 },
-        { type: 'vote', target: 'idea-2', user: 'Sarah Chen', delay: 5500 },
-        { type: 'ai-team-comment', position: { x: 200, y: 180 }, text: 'Based on user data, AI onboarding could increase retention by 40%.', user: 'AI Assistant', delay: 7000 },
-        { type: 'emoji', emoji: '🚀', position: { x: 500, y: 200 }, user: 'Marcus Rodriguez', delay: 8500 },
-        { type: 'cleanup', target: 'emojis', delay: 11500 }
+        { type: 'upvote', target: 'idea-1', user: 'Marcus Rodriguez', delay: 2500 },
+        { type: 'upvote', target: 'idea-1', user: 'Emily Watson', delay: 3000 },
+        { type: 'team-comment', position: { x: 250, y: 180 }, text: 'Great idea! This could really improve user retention.', user: 'Marcus Rodriguez', delay: 3500 },
+        { type: 'emoji', emoji: '👍', position: { x: 250, y: 150 }, user: 'Emily Watson', delay: 4000 },
+        { type: 'idea', position: { x: 450, y: 200 }, text: 'Mobile-first design system', user: 'Emily Watson', delay: 5500 },
+        { type: 'upvote', target: 'idea-2', user: 'Sarah Chen', delay: 6000 },
+        { type: 'upvote', target: 'idea-2', user: 'Marcus Rodriguez', delay: 6500 },
+        { type: 'team-comment', position: { x: 480, y: 230 }, text: 'Mobile-first is essential for our target audience.', user: 'Sarah Chen', delay: 7000 },
+        { type: 'ai-team-comment', position: { x: 200, y: 180 }, text: 'Based on user data, AI onboarding could increase retention by 40%.', user: 'AI Assistant', delay: 8500 },
+        { type: 'emoji', emoji: '🚀', position: { x: 500, y: 200 }, user: 'Marcus Rodriguez', delay: 10000 },
+        { type: 'upvote', target: 'idea-1', user: 'Project Manager', delay: 11000 },
+        { type: 'cleanup', target: 'emojis', delay: 13500 }
       ]
     },
     {
@@ -230,15 +239,16 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
       id: 'decision-finalization',
       title: '✅ Decision Finalization & Export',
       description: 'Complete workflow to final decision with export options',
-      duration: 8000,
+      duration: 10000,
       narration: 'Finally, we finalize our decisions based on team consensus and AI insights, then export our collaborative session for stakeholders.',
       actions: [
         { type: 'cursor', position: { x: 200, y: 150 }, user: 'Project Manager', color: '#8B5CF6', delay: 500 },
-        { type: 'click', target: 'approve-idea', delay: 1500 },
-        { type: 'canvas-action', target: 'finalize-decision', delay: 2000 },
-        { type: 'close-panel', target: 'ai-panel', delay: 4000 },
-        { type: 'highlight', target: 'export-button', delay: 5000, duration: 1500 },
-        { type: 'cleanup', target: 'all', delay: 7500 }
+        { type: 'team-comment', position: { x: 230, y: 120 }, text: 'Based on votes and AI analysis, we approve the AI onboarding feature!', user: 'Project Manager', delay: 1500 },
+        { type: 'click', target: 'approve-idea', delay: 3000 },
+        { type: 'canvas-action', target: 'finalize-decision', delay: 3500 },
+        { type: 'close-panel', target: 'ai-panel', delay: 6000 },
+        { type: 'highlight', target: 'export-button', delay: 7000, duration: 1500 },
+        { type: 'cleanup', target: 'all', delay: 9500 }
       ]
     }
   ];
@@ -340,8 +350,9 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
 
       case 'idea':
         if (action.position && action.text && action.user) {
+          const ideaId = `auto-idea-${Date.now()}`;
           setAutoIdeas(prev => [...prev, {
-            id: `auto-idea-${Date.now()}`,
+            id: ideaId,
             text: action.text,
             position: action.position,
             author: action.user,
@@ -353,11 +364,45 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         break;
 
       case 'vote':
-        setAutoIdeas(prev => prev.map(idea => 
-          idea.id === action.target 
-            ? { ...idea, votes: idea.votes + 1 }
-            : idea
-        ));
+      case 'upvote':
+        if (action.target && action.user) {
+          setAutoIdeas(prev => prev.map(idea => 
+            idea.id === action.target || `auto-idea-${idea.id}` === action.target || idea.text.includes('AI-powered') && action.target === 'idea-1' || idea.text.includes('Mobile-first') && action.target === 'idea-2'
+              ? { ...idea, votes: idea.votes + 1 }
+              : idea
+          ));
+          
+          // Add upvote animation
+          const upvoteId = `upvote-${Date.now()}`;
+          setUpvotes(prev => [...prev, {
+            id: upvoteId,
+            user: action.user,
+            target: action.target,
+            timestamp: new Date()
+          }]);
+          
+          setTimeout(() => {
+            setUpvotes(prev => prev.filter(u => u.id !== upvoteId));
+          }, 2000);
+        }
+        break;
+
+      case 'team-comment':
+        if (action.position && action.text && action.user) {
+          const commentId = `team-comment-${Date.now()}`;
+          setTeamComments(prev => [...prev, {
+            id: commentId,
+            text: action.text,
+            position: action.position,
+            author: action.user,
+            timestamp: new Date(),
+            isTeam: true
+          }]);
+          
+          setTimeout(() => {
+            setTeamComments(prev => prev.filter(c => c.id !== commentId));
+          }, 4000);
+        }
         break;
 
       case 'emoji':
@@ -589,16 +634,23 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
           setEmojiReactions([]);
         } else if (action.target === 'comments') {
           setDemoComments([]);
+          setTeamComments([]);
         } else if (action.target === 'modals') {
           setNewSessionModal(false);
           setShowAIPrompt(false);
           setShowMermaidChart(false);
         } else if (action.target === 'highlights') {
           setHighlightedElement(null);
+        } else if (action.target === 'diagrams') {
+          setCanvasShapes([]);
+        } else if (action.target === 'canvas-shapes') {
+          setCanvasShapes(prev => prev.filter(shape => !shape.id.startsWith('shape-') && !shape.id.startsWith('connector-')));
         } else if (action.target === 'all') {
           setCursors([]);
           setEmojiReactions([]);
           setDemoComments([]);
+          setTeamComments([]);
+          setUpvotes([]);
           setHighlightedElement(null);
           setSidebarContent(null);
           setSearchResults([]);
@@ -647,6 +699,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     setCursors([]);
     setAutoIdeas([]);
     setDemoComments([]);
+    setTeamComments([]);
+    setUpvotes([]);
     setEmojiReactions([]);
     setCanvasShapes([]);
     setOpenPanels([]);
@@ -761,7 +815,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="absolute top-1/2 right-4 transform -translate-y-1/2 translate-y-[-15px] bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-[80] max-w-sm"
+            className="absolute top-1/2 right-4 transform -translate-y-1/2 translate-y-[-35px] bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-[80] max-w-sm"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
@@ -888,6 +942,65 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
                   </span>
                 </div>
               )}
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* Upvote Animations */}
+      <AnimatePresence>
+        {upvotes.map((upvote) => (
+          <motion.div
+            key={upvote.id}
+            initial={{ opacity: 0, scale: 0.5, y: 0 }}
+            animate={{ opacity: 1, scale: 1.2, y: -40 }}
+            exit={{ opacity: 0, scale: 0.5, y: -80 }}
+            transition={{ duration: 0.8 }}
+            className="absolute pointer-events-none z-[75] text-lg"
+            style={{
+              left: Math.random() * 100 + 200,
+              top: Math.random() * 100 + 150,
+            }}
+          >
+            <div className="flex items-center space-x-1 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+              <ThumbsUp className="w-3 h-3" />
+              <span>+1</span>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* Team Comments */}
+      <AnimatePresence>
+        {teamComments.map((comment) => (
+          <motion.div
+            key={comment.id}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute pointer-events-none z-[65]"
+            style={{
+              left: comment.position.x + 20,
+              top: comment.position.y - 10,
+            }}
+          >
+            <div className={`max-w-xs border rounded-lg p-2 shadow-lg ${
+              comment.author === 'Project Manager' && comment.text.includes('approve')
+                ? 'bg-green-50 border-green-300' 
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              <div className="flex items-center space-x-2 mb-1">
+                <Users className="w-3 h-3 text-blue-600" />
+                <span className="text-xs font-medium text-blue-700">
+                  {comment.author}
+                </span>
+                {comment.author === 'Project Manager' && (
+                  <Crown className="w-3 h-3 text-yellow-500" />
+                )}
+              </div>
+              <p className="text-xs text-blue-600">
+                {comment.text}
+              </p>
             </div>
           </motion.div>
         ))}
