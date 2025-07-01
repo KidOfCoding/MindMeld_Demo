@@ -66,7 +66,537 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
   const [drawingObject, setDrawingObject] = useState<fabric.Object | null>(null);
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
 
-  // Initialize Fabric.js canvas
+  // Grid functions
+  const addGrid = useCallback((canvas: fabric.Canvas, canvasWidth: number, canvasHeight: number) => {
+    const gridSize = 20;
+    const gridOptions = {
+      stroke: '#e5e7eb',
+      strokeWidth: 1,
+      selectable: false,
+      evented: false,
+      excludeFromExport: true
+    };
+
+    // Remove existing grid
+    canvas.getObjects().forEach(obj => {
+      if (obj.excludeFromExport) {
+        canvas.remove(obj);
+      }
+    });
+
+    // Vertical lines
+    for (let i = 0; i <= canvasWidth / gridSize; i++) {
+      const line = new fabric.Line([i * gridSize, 0, i * gridSize, canvasHeight], gridOptions);
+      canvas.add(line);
+      canvas.sendToBack(line);
+    }
+
+    // Horizontal lines
+    for (let i = 0; i <= canvasHeight / gridSize; i++) {
+      const line = new fabric.Line([0, i * gridSize, canvasWidth, i * gridSize], gridOptions);
+      canvas.add(line);
+      canvas.sendToBack(line);
+    }
+  }, []);
+
+  // Canvas operations
+  const saveState = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const state = JSON.stringify(canvas.toJSON());
+    
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(state);
+      return newHistory.slice(-50); // Keep last 50 states
+    });
+    
+    setHistoryIndex(prev => prev + 1);
+  }, [historyIndex]);
+
+  const createArrowPath = useCallback((x1: number, y1: number, x2: number, y2: number) => {
+    const headLength = 15;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    
+    const arrowX1 = x2 - headLength * Math.cos(angle - Math.PI / 6);
+    const arrowY1 = y2 - headLength * Math.sin(angle - Math.PI / 6);
+    const arrowX2 = x2 - headLength * Math.cos(angle + Math.PI / 6);
+    const arrowY2 = y2 - headLength * Math.sin(angle + Math.PI / 6);
+    
+    return `M ${x1} ${y1} L ${x2} ${y2} M ${arrowX1} ${arrowY1} L ${x2} ${y2} L ${arrowX2} ${arrowY2}`;
+  }, []);
+
+  // Object creation functions
+  const addStickyNote = useCallback((pointer: fabric.Point) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    
+    const rect = new fabric.Rect({
+      left: pointer.x,
+      top: pointer.y,
+      width: 200,
+      height: 200,
+      fill: '#FFE066',
+      stroke: '#E6CC00',
+      strokeWidth: 1,
+      rx: 8,
+      ry: 8,
+      shadow: new fabric.Shadow({
+        color: 'rgba(0,0,0,0.2)',
+        blur: 5,
+        offsetX: 2,
+        offsetY: 2
+      })
+    });
+
+    const text = new fabric.Textbox('Double-click to edit', {
+      left: pointer.x + 10,
+      top: pointer.y + 10,
+      width: 180,
+      fontSize: 14,
+      fontFamily: 'Arial',
+      fill: '#000000',
+      textAlign: 'left'
+    });
+
+    const group = new fabric.Group([rect, text], {
+      left: pointer.x,
+      top: pointer.y,
+      selectable: true,
+      hasControls: true,
+      hasBorders: true
+    });
+
+    canvas.add(group);
+    canvas.setActiveObject(group);
+    canvas.renderAll();
+  }, []);
+
+  const addText = useCallback((pointer: fabric.Point) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const text = new fabric.Textbox('Type here...', {
+      left: pointer.x,
+      top: pointer.y,
+      width: 200,
+      fontSize: 16,
+      fontFamily: 'Arial',
+      fill: currentColor,
+      textAlign: 'left',
+      editable: true
+    });
+
+    canvas.add(text);
+    canvas.setActiveObject(text);
+    text.enterEditing();
+    canvas.renderAll();
+  }, [currentColor]);
+
+  const startDrawingRectangle = useCallback((pointer: fabric.Point) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const rect = new fabric.Rect({
+      left: pointer.x,
+      top: pointer.y,
+      width: 0,
+      height: 0,
+      fill: fillColor,
+      stroke: currentColor,
+      strokeWidth: strokeWidth,
+      rx: 0,
+      ry: 0
+    });
+
+    canvas.add(rect);
+    setDrawingObject(rect);
+  }, [fillColor, currentColor, strokeWidth]);
+
+  const updateRectangle = useCallback((rect: fabric.Rect, start: fabric.Point, current: fabric.Point) => {
+    const width = Math.abs(current.x - start.x);
+    const height = Math.abs(current.y - start.y);
+    const left = Math.min(start.x, current.x);
+    const top = Math.min(start.y, current.y);
+
+    rect.set({
+      left: left,
+      top: top,
+      width: width,
+      height: height
+    });
+    rect.setCoords();
+  }, []);
+
+  const startDrawingCircle = useCallback((pointer: fabric.Point) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const circle = new fabric.Circle({
+      left: pointer.x,
+      top: pointer.y,
+      radius: 0,
+      fill: fillColor,
+      stroke: currentColor,
+      strokeWidth: strokeWidth
+    });
+
+    canvas.add(circle);
+    setDrawingObject(circle);
+  }, [fillColor, currentColor, strokeWidth]);
+
+  const updateCircle = useCallback((circle: fabric.Circle, start: fabric.Point, current: fabric.Point) => {
+    const radius = Math.abs(current.x - start.x) / 2;
+    const left = Math.min(start.x, current.x);
+    const top = Math.min(start.y, current.y);
+
+    circle.set({
+      left: left,
+      top: top,
+      radius: radius
+    });
+    circle.setCoords();
+  }, []);
+
+  const startDrawingLine = useCallback((pointer: fabric.Point) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
+      stroke: currentColor,
+      strokeWidth: strokeWidth,
+      strokeLineCap: 'round'
+    });
+
+    canvas.add(line);
+    setDrawingObject(line);
+  }, [currentColor, strokeWidth]);
+
+  const updateLine = useCallback((line: fabric.Line, start: fabric.Point, current: fabric.Point) => {
+    line.set({
+      x1: start.x,
+      y1: start.y,
+      x2: current.x,
+      y2: current.y
+    });
+    line.setCoords();
+  }, []);
+
+  const startDrawingArrow = useCallback((pointer: fabric.Point) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const arrowPath = `M ${pointer.x} ${pointer.y} L ${pointer.x} ${pointer.y}`;
+    
+    const arrow = new fabric.Path(arrowPath, {
+      stroke: currentColor,
+      strokeWidth: strokeWidth,
+      fill: '',
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round'
+    });
+
+    canvas.add(arrow);
+    setDrawingObject(arrow);
+  }, [currentColor, strokeWidth]);
+
+  const updateArrow = useCallback((arrow: fabric.Path, start: fabric.Point, current: fabric.Point) => {
+    const arrowPath = createArrowPath(start.x, start.y, current.x, current.y);
+    arrow.path = fabric.util.parsePath(arrowPath);
+    arrow._setPath(arrowPath);
+    arrow.setCoords();
+  }, [createArrowPath]);
+
+  // Mouse event handlers
+  const handleMouseDown = useCallback((e: fabric.IEvent) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const pointer = canvas.getPointer(e.e);
+
+    if (activeTool === 'hand') {
+      canvas.isDragging = true;
+      canvas.selection = false;
+      canvas.lastPosX = e.e.clientX;
+      canvas.lastPosY = e.e.clientY;
+      return;
+    }
+
+    setIsDrawing(true);
+    setStartPoint(pointer);
+
+    switch (activeTool) {
+      case 'sticky':
+        addStickyNote(pointer);
+        break;
+      case 'text':
+        addText(pointer);
+        break;
+      case 'rectangle':
+        startDrawingRectangle(pointer);
+        break;
+      case 'circle':
+        startDrawingCircle(pointer);
+        break;
+      case 'line':
+        startDrawingLine(pointer);
+        break;
+      case 'arrow':
+        startDrawingArrow(pointer);
+        break;
+    }
+  }, [activeTool, addStickyNote, addText, startDrawingRectangle, startDrawingCircle, startDrawingLine, startDrawingArrow]);
+
+  const handleMouseMove = useCallback((e: fabric.IEvent) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const pointer = canvas.getPointer(e.e);
+
+    if (activeTool === 'hand' && canvas.isDragging) {
+      const vpt = canvas.viewportTransform;
+      if (vpt) {
+        vpt[4] += e.e.clientX - canvas.lastPosX;
+        vpt[5] += e.e.clientY - canvas.lastPosY;
+        canvas.requestRenderAll();
+        canvas.lastPosX = e.e.clientX;
+        canvas.lastPosY = e.e.clientY;
+      }
+      return;
+    }
+
+    if (!isDrawing || !startPoint || !drawingObject) return;
+
+    // Update drawing object based on tool
+    switch (activeTool) {
+      case 'rectangle':
+        updateRectangle(drawingObject as fabric.Rect, startPoint, pointer);
+        break;
+      case 'circle':
+        updateCircle(drawingObject as fabric.Circle, startPoint, pointer);
+        break;
+      case 'line':
+        updateLine(drawingObject as fabric.Line, startPoint, pointer);
+        break;
+      case 'arrow':
+        updateArrow(drawingObject as fabric.Path, startPoint, pointer);
+        break;
+    }
+
+    canvas.renderAll();
+  }, [activeTool, isDrawing, startPoint, drawingObject, updateRectangle, updateCircle, updateLine, updateArrow]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    
+    if (activeTool === 'hand') {
+      canvas.isDragging = false;
+      canvas.selection = true;
+    }
+
+    setIsDrawing(false);
+    setStartPoint(null);
+    setDrawingObject(null);
+
+    // Re-enable selection for select tool
+    if (activeTool === 'select') {
+      canvas.forEachObject((obj) => {
+        obj.selectable = true;
+        obj.evented = true;
+      });
+    }
+  }, [activeTool]);
+
+  const undo = useCallback(() => {
+    if (!fabricCanvasRef.current || historyIndex <= 0) return;
+
+    const canvas = fabricCanvasRef.current;
+    const prevState = history[historyIndex - 1];
+    
+    canvas.loadFromJSON(prevState, () => {
+      canvas.renderAll();
+      setHistoryIndex(prev => prev - 1);
+    });
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (!fabricCanvasRef.current || historyIndex >= history.length - 1) return;
+
+    const canvas = fabricCanvasRef.current;
+    const nextState = history[historyIndex + 1];
+    
+    canvas.loadFromJSON(nextState, () => {
+      canvas.renderAll();
+      setHistoryIndex(prev => prev + 1);
+    });
+  }, [history, historyIndex]);
+
+  const copyObjects = useCallback(() => {
+    if (!fabricCanvasRef.current || selectedObjects.length === 0) return;
+
+    const canvas = fabricCanvasRef.current;
+    const activeObjects = canvas.getActiveObjects();
+    
+    setClipboard([...activeObjects]);
+  }, [selectedObjects]);
+
+  const pasteObjects = useCallback(() => {
+    if (!fabricCanvasRef.current || clipboard.length === 0) return;
+
+    const canvas = fabricCanvasRef.current;
+    
+    clipboard.forEach(obj => {
+      obj.clone((cloned: fabric.Object) => {
+        cloned.set({
+          left: (cloned.left || 0) + 20,
+          top: (cloned.top || 0) + 20,
+          evented: true,
+          selectable: true
+        });
+        
+        canvas.add(cloned);
+        canvas.setActiveObject(cloned);
+        canvas.requestRenderAll();
+      });
+    });
+  }, [clipboard]);
+
+  const duplicateObjects = useCallback(() => {
+    copyObjects();
+    pasteObjects();
+  }, [copyObjects, pasteObjects]);
+
+  const deleteSelected = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const activeObjects = canvas.getActiveObjects();
+    
+    if (activeObjects.length > 0) {
+      activeObjects.forEach(obj => canvas.remove(obj));
+      canvas.discardActiveObject();
+      canvas.renderAll();
+    }
+  }, []);
+
+  const selectAll = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const allObjects = canvas.getObjects().filter(obj => obj.selectable !== false && !obj.excludeFromExport);
+    
+    if (allObjects.length > 1) {
+      const selection = new fabric.ActiveSelection(allObjects, { canvas });
+      canvas.setActiveObject(selection);
+      canvas.renderAll();
+    } else if (allObjects.length === 1) {
+      canvas.setActiveObject(allObjects[0]);
+      canvas.renderAll();
+    }
+  }, []);
+
+  const clearCanvas = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    canvas.clear();
+    canvas.backgroundColor = '#ffffff';
+    
+    if (showGrid) {
+      addGrid(canvas, width, height);
+    }
+    
+    canvas.renderAll();
+    saveState();
+  }, [showGrid, addGrid, width, height, saveState]);
+
+  const saveCanvas = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const dataURL = canvas.toDataURL({
+      format: 'png',
+      quality: 1,
+      multiplier: 2
+    });
+
+    const link = document.createElement('a');
+    link.download = `canvas-${Date.now()}.png`;
+    link.href = dataURL;
+    link.click();
+  }, []);
+
+  const exportJSON = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const json = JSON.stringify(canvas.toJSON(), null, 2);
+    
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.download = `canvas-${Date.now()}.json`;
+    link.href = url;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const importJSON = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !fabricCanvasRef.current) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        fabricCanvasRef.current?.loadFromJSON(json, () => {
+          fabricCanvasRef.current?.renderAll();
+          saveState();
+        });
+      } catch (error) {
+        console.error('Error importing JSON:', error);
+        alert('Error importing file. Please check the file format.');
+      }
+    };
+    reader.readAsText(file);
+  }, [saveState]);
+
+  // Zoom functions
+  const zoomIn = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+    
+    const canvas = fabricCanvasRef.current;
+    const newZoom = Math.min(zoom * 1.2, 5);
+    canvas.setZoom(newZoom);
+    setZoom(newZoom);
+  }, [zoom]);
+
+  const zoomOut = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+    
+    const canvas = fabricCanvasRef.current;
+    const newZoom = Math.max(zoom / 1.2, 0.1);
+    canvas.setZoom(newZoom);
+    setZoom(newZoom);
+  }, [zoom]);
+
+  const resetZoom = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+    
+    const canvas = fabricCanvasRef.current;
+    canvas.setZoom(1);
+    canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
+    canvas.renderAll();
+    setZoom(1);
+  }, []);
+
+  // Initialize Fabric.js canvas - only once on mount
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -88,7 +618,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
 
     // Add grid
     if (showGrid) {
-      addGrid(canvas);
+      addGrid(canvas, width, height);
     }
 
     // Event listeners
@@ -128,9 +658,9 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       }
     });
 
-    canvas.on('mouse:down', (e) => handleMouseDown(e));
-    canvas.on('mouse:move', (e) => handleMouseMove(e));
-    canvas.on('mouse:up', (e) => handleMouseUp(e));
+    canvas.on('mouse:down', handleMouseDown);
+    canvas.on('mouse:move', handleMouseMove);
+    canvas.on('mouse:up', handleMouseUp);
 
     // Keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -207,15 +737,28 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       canvas.dispose();
     };
-  }, [width, height, showGrid]);
+  }, []); // Only initialize once
 
-  // Update canvas size
+  // Update canvas size and grid when dimensions or showGrid change
   useEffect(() => {
-    if (fabricCanvasRef.current) {
-      fabricCanvasRef.current.setDimensions({ width, height });
-      fabricCanvasRef.current.renderAll();
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    canvas.setDimensions({ width, height });
+    
+    if (showGrid) {
+      addGrid(canvas, width, height);
+    } else {
+      // Remove grid if showGrid is false
+      canvas.getObjects().forEach(obj => {
+        if (obj.excludeFromExport) {
+          canvas.remove(obj);
+        }
+      });
     }
-  }, [width, height]);
+    
+    canvas.renderAll();
+  }, [width, height, showGrid, addGrid]);
 
   // Update tool cursor and mode
   useEffect(() => {
@@ -267,536 +810,6 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     }
     canvas.renderAll();
   }, [activeTool, strokeWidth, currentColor]);
-
-  // Grid functions
-  const addGrid = (canvas: fabric.Canvas) => {
-    const gridSize = 20;
-    const gridOptions = {
-      stroke: '#e5e7eb',
-      strokeWidth: 1,
-      selectable: false,
-      evented: false,
-      excludeFromExport: true
-    };
-
-    // Remove existing grid
-    canvas.getObjects().forEach(obj => {
-      if (obj.excludeFromExport) {
-        canvas.remove(obj);
-      }
-    });
-
-    // Vertical lines
-    for (let i = 0; i <= width / gridSize; i++) {
-      const line = new fabric.Line([i * gridSize, 0, i * gridSize, height], gridOptions);
-      canvas.add(line);
-      canvas.sendToBack(line);
-    }
-
-    // Horizontal lines
-    for (let i = 0; i <= height / gridSize; i++) {
-      const line = new fabric.Line([0, i * gridSize, width, i * gridSize], gridOptions);
-      canvas.add(line);
-      canvas.sendToBack(line);
-    }
-  };
-
-  // Mouse event handlers
-  const handleMouseDown = (e: fabric.IEvent) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const pointer = canvas.getPointer(e.e);
-
-    if (activeTool === 'hand') {
-      canvas.isDragging = true;
-      canvas.selection = false;
-      canvas.lastPosX = e.e.clientX;
-      canvas.lastPosY = e.e.clientY;
-      return;
-    }
-
-    setIsDrawing(true);
-    setStartPoint(pointer);
-
-    switch (activeTool) {
-      case 'sticky':
-        addStickyNote(pointer);
-        break;
-      case 'text':
-        addText(pointer);
-        break;
-      case 'rectangle':
-        startDrawingRectangle(pointer);
-        break;
-      case 'circle':
-        startDrawingCircle(pointer);
-        break;
-      case 'line':
-        startDrawingLine(pointer);
-        break;
-      case 'arrow':
-        startDrawingArrow(pointer);
-        break;
-    }
-  };
-
-  const handleMouseMove = (e: fabric.IEvent) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const pointer = canvas.getPointer(e.e);
-
-    if (activeTool === 'hand' && canvas.isDragging) {
-      const vpt = canvas.viewportTransform;
-      if (vpt) {
-        vpt[4] += e.e.clientX - canvas.lastPosX;
-        vpt[5] += e.e.clientY - canvas.lastPosY;
-        canvas.requestRenderAll();
-        canvas.lastPosX = e.e.clientX;
-        canvas.lastPosY = e.e.clientY;
-      }
-      return;
-    }
-
-    if (!isDrawing || !startPoint || !drawingObject) return;
-
-    // Update drawing object based on tool
-    switch (activeTool) {
-      case 'rectangle':
-        updateRectangle(drawingObject as fabric.Rect, startPoint, pointer);
-        break;
-      case 'circle':
-        updateCircle(drawingObject as fabric.Circle, startPoint, pointer);
-        break;
-      case 'line':
-        updateLine(drawingObject as fabric.Line, startPoint, pointer);
-        break;
-      case 'arrow':
-        updateArrow(drawingObject as fabric.Path, startPoint, pointer);
-        break;
-    }
-
-    canvas.renderAll();
-  };
-
-  const handleMouseUp = () => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    
-    if (activeTool === 'hand') {
-      canvas.isDragging = false;
-      canvas.selection = true;
-    }
-
-    setIsDrawing(false);
-    setStartPoint(null);
-    setDrawingObject(null);
-
-    // Re-enable selection for select tool
-    if (activeTool === 'select') {
-      canvas.forEachObject((obj) => {
-        obj.selectable = true;
-        obj.evented = true;
-      });
-    }
-  };
-
-  // Object creation functions
-  const addStickyNote = (pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    
-    const rect = new fabric.Rect({
-      left: pointer.x,
-      top: pointer.y,
-      width: 200,
-      height: 200,
-      fill: '#FFE066',
-      stroke: '#E6CC00',
-      strokeWidth: 1,
-      rx: 8,
-      ry: 8,
-      shadow: new fabric.Shadow({
-        color: 'rgba(0,0,0,0.2)',
-        blur: 5,
-        offsetX: 2,
-        offsetY: 2
-      })
-    });
-
-    const text = new fabric.Textbox('Double-click to edit', {
-      left: pointer.x + 10,
-      top: pointer.y + 10,
-      width: 180,
-      fontSize: 14,
-      fontFamily: 'Arial',
-      fill: '#000000',
-      textAlign: 'left'
-    });
-
-    const group = new fabric.Group([rect, text], {
-      left: pointer.x,
-      top: pointer.y,
-      selectable: true,
-      hasControls: true,
-      hasBorders: true
-    });
-
-    canvas.add(group);
-    canvas.setActiveObject(group);
-    canvas.renderAll();
-  };
-
-  const addText = (pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const text = new fabric.Textbox('Type here...', {
-      left: pointer.x,
-      top: pointer.y,
-      width: 200,
-      fontSize: 16,
-      fontFamily: 'Arial',
-      fill: currentColor,
-      textAlign: 'left',
-      editable: true
-    });
-
-    canvas.add(text);
-    canvas.setActiveObject(text);
-    text.enterEditing();
-    canvas.renderAll();
-  };
-
-  const startDrawingRectangle = (pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const rect = new fabric.Rect({
-      left: pointer.x,
-      top: pointer.y,
-      width: 0,
-      height: 0,
-      fill: fillColor,
-      stroke: currentColor,
-      strokeWidth: strokeWidth,
-      rx: 0,
-      ry: 0
-    });
-
-    canvas.add(rect);
-    setDrawingObject(rect);
-  };
-
-  const updateRectangle = (rect: fabric.Rect, start: fabric.Point, current: fabric.Point) => {
-    const width = Math.abs(current.x - start.x);
-    const height = Math.abs(current.y - start.y);
-    const left = Math.min(start.x, current.x);
-    const top = Math.min(start.y, current.y);
-
-    rect.set({
-      left: left,
-      top: top,
-      width: width,
-      height: height
-    });
-    rect.setCoords();
-  };
-
-  const startDrawingCircle = (pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const circle = new fabric.Circle({
-      left: pointer.x,
-      top: pointer.y,
-      radius: 0,
-      fill: fillColor,
-      stroke: currentColor,
-      strokeWidth: strokeWidth
-    });
-
-    canvas.add(circle);
-    setDrawingObject(circle);
-  };
-
-  const updateCircle = (circle: fabric.Circle, start: fabric.Point, current: fabric.Point) => {
-    const radius = Math.abs(current.x - start.x) / 2;
-    const left = Math.min(start.x, current.x);
-    const top = Math.min(start.y, current.y);
-
-    circle.set({
-      left: left,
-      top: top,
-      radius: radius
-    });
-    circle.setCoords();
-  };
-
-  const startDrawingLine = (pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-      stroke: currentColor,
-      strokeWidth: strokeWidth,
-      strokeLineCap: 'round'
-    });
-
-    canvas.add(line);
-    setDrawingObject(line);
-  };
-
-  const updateLine = (line: fabric.Line, start: fabric.Point, current: fabric.Point) => {
-    line.set({
-      x1: start.x,
-      y1: start.y,
-      x2: current.x,
-      y2: current.y
-    });
-    line.setCoords();
-  };
-
-  const startDrawingArrow = (pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const arrowPath = `M ${pointer.x} ${pointer.y} L ${pointer.x} ${pointer.y}`;
-    
-    const arrow = new fabric.Path(arrowPath, {
-      stroke: currentColor,
-      strokeWidth: strokeWidth,
-      fill: '',
-      strokeLineCap: 'round',
-      strokeLineJoin: 'round'
-    });
-
-    canvas.add(arrow);
-    setDrawingObject(arrow);
-  };
-
-  const updateArrow = (arrow: fabric.Path, start: fabric.Point, current: fabric.Point) => {
-    const arrowPath = createArrowPath(start.x, start.y, current.x, current.y);
-    arrow.path = fabric.util.parsePath(arrowPath);
-    arrow._setPath(arrowPath);
-    arrow.setCoords();
-  };
-
-  const createArrowPath = (x1: number, y1: number, x2: number, y2: number) => {
-    const headLength = 15;
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    
-    const arrowX1 = x2 - headLength * Math.cos(angle - Math.PI / 6);
-    const arrowY1 = y2 - headLength * Math.sin(angle - Math.PI / 6);
-    const arrowX2 = x2 - headLength * Math.cos(angle + Math.PI / 6);
-    const arrowY2 = y2 - headLength * Math.sin(angle + Math.PI / 6);
-    
-    return `M ${x1} ${y1} L ${x2} ${y2} M ${arrowX1} ${arrowY1} L ${x2} ${y2} L ${arrowX2} ${arrowY2}`;
-  };
-
-  // Canvas operations
-  const saveState = useCallback(() => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const state = JSON.stringify(canvas.toJSON());
-    
-    setHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push(state);
-      return newHistory.slice(-50); // Keep last 50 states
-    });
-    
-    setHistoryIndex(prev => prev + 1);
-  }, [historyIndex]);
-
-  const undo = () => {
-    if (!fabricCanvasRef.current || historyIndex <= 0) return;
-
-    const canvas = fabricCanvasRef.current;
-    const prevState = history[historyIndex - 1];
-    
-    canvas.loadFromJSON(prevState, () => {
-      canvas.renderAll();
-      setHistoryIndex(prev => prev - 1);
-    });
-  };
-
-  const redo = () => {
-    if (!fabricCanvasRef.current || historyIndex >= history.length - 1) return;
-
-    const canvas = fabricCanvasRef.current;
-    const nextState = history[historyIndex + 1];
-    
-    canvas.loadFromJSON(nextState, () => {
-      canvas.renderAll();
-      setHistoryIndex(prev => prev + 1);
-    });
-  };
-
-  const copyObjects = () => {
-    if (!fabricCanvasRef.current || selectedObjects.length === 0) return;
-
-    const canvas = fabricCanvasRef.current;
-    const activeObjects = canvas.getActiveObjects();
-    
-    setClipboard([...activeObjects]);
-  };
-
-  const pasteObjects = () => {
-    if (!fabricCanvasRef.current || clipboard.length === 0) return;
-
-    const canvas = fabricCanvasRef.current;
-    
-    clipboard.forEach(obj => {
-      obj.clone((cloned: fabric.Object) => {
-        cloned.set({
-          left: (cloned.left || 0) + 20,
-          top: (cloned.top || 0) + 20,
-          evented: true,
-          selectable: true
-        });
-        
-        canvas.add(cloned);
-        canvas.setActiveObject(cloned);
-        canvas.requestRenderAll();
-      });
-    });
-  };
-
-  const duplicateObjects = () => {
-    copyObjects();
-    pasteObjects();
-  };
-
-  const deleteSelected = () => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const activeObjects = canvas.getActiveObjects();
-    
-    if (activeObjects.length > 0) {
-      activeObjects.forEach(obj => canvas.remove(obj));
-      canvas.discardActiveObject();
-      canvas.renderAll();
-    }
-  };
-
-  const selectAll = () => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const allObjects = canvas.getObjects().filter(obj => obj.selectable !== false && !obj.excludeFromExport);
-    
-    if (allObjects.length > 1) {
-      const selection = new fabric.ActiveSelection(allObjects, { canvas });
-      canvas.setActiveObject(selection);
-      canvas.renderAll();
-    } else if (allObjects.length === 1) {
-      canvas.setActiveObject(allObjects[0]);
-      canvas.renderAll();
-    }
-  };
-
-  const clearCanvas = () => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    canvas.clear();
-    canvas.backgroundColor = '#ffffff';
-    
-    if (showGrid) {
-      addGrid(canvas);
-    }
-    
-    canvas.renderAll();
-    saveState();
-  };
-
-  const saveCanvas = () => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const dataURL = canvas.toDataURL({
-      format: 'png',
-      quality: 1,
-      multiplier: 2
-    });
-
-    const link = document.createElement('a');
-    link.download = `canvas-${Date.now()}.png`;
-    link.href = dataURL;
-    link.click();
-  };
-
-  const exportJSON = () => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const json = JSON.stringify(canvas.toJSON(), null, 2);
-    
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.download = `canvas-${Date.now()}.json`;
-    link.href = url;
-    link.click();
-    
-    URL.revokeObjectURL(url);
-  };
-
-  const importJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !fabricCanvasRef.current) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const json = JSON.parse(e.target?.result as string);
-        fabricCanvasRef.current?.loadFromJSON(json, () => {
-          fabricCanvasRef.current?.renderAll();
-          saveState();
-        });
-      } catch (error) {
-        console.error('Error importing JSON:', error);
-        alert('Error importing file. Please check the file format.');
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  // Zoom functions
-  const zoomIn = () => {
-    if (!fabricCanvasRef.current) return;
-    
-    const canvas = fabricCanvasRef.current;
-    const newZoom = Math.min(zoom * 1.2, 5);
-    canvas.setZoom(newZoom);
-    setZoom(newZoom);
-  };
-
-  const zoomOut = () => {
-    if (!fabricCanvasRef.current) return;
-    
-    const canvas = fabricCanvasRef.current;
-    const newZoom = Math.max(zoom / 1.2, 0.1);
-    canvas.setZoom(newZoom);
-    setZoom(newZoom);
-  };
-
-  const resetZoom = () => {
-    if (!fabricCanvasRef.current) return;
-    
-    const canvas = fabricCanvasRef.current;
-    canvas.setZoom(1);
-    canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
-    canvas.renderAll();
-    setZoom(1);
-  };
 
   // Color palette
   const colors = [
