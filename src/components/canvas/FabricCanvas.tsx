@@ -115,18 +115,6 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     setHistoryIndex(prev => prev + 1);
   }, [historyIndex]);
 
-  const createArrowPath = useCallback((x1: number, y1: number, x2: number, y2: number) => {
-    const headLength = 15;
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    
-    const arrowX1 = x2 - headLength * Math.cos(angle - Math.PI / 6);
-    const arrowY1 = y2 - headLength * Math.sin(angle - Math.PI / 6);
-    const arrowX2 = x2 - headLength * Math.cos(angle + Math.PI / 6);
-    const arrowY2 = y2 - headLength * Math.sin(angle + Math.PI / 6);
-    
-    return `M ${x1} ${y1} L ${x2} ${y2} M ${arrowX1} ${arrowY1} L ${x2} ${y2} L ${arrowX2} ${arrowY2}`;
-  }, []);
-
   // Object creation functions
   const addStickyNote = useCallback((pointer: fabric.Point) => {
     if (!fabricCanvasRef.current) return;
@@ -172,7 +160,8 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     canvas.add(group);
     canvas.setActiveObject(group);
     canvas.renderAll();
-  }, []);
+    saveState();
+  }, [saveState]);
 
   const addText = useCallback((pointer: fabric.Point) => {
     if (!fabricCanvasRef.current) return;
@@ -193,121 +182,8 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     canvas.setActiveObject(text);
     text.enterEditing();
     canvas.renderAll();
-  }, [currentColor]);
-
-  const startDrawingRectangle = useCallback((pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const rect = new fabric.Rect({
-      left: pointer.x,
-      top: pointer.y,
-      width: 0,
-      height: 0,
-      fill: fillColor,
-      stroke: currentColor,
-      strokeWidth: strokeWidth,
-      rx: 0,
-      ry: 0
-    });
-
-    canvas.add(rect);
-    setDrawingObject(rect);
-  }, [fillColor, currentColor, strokeWidth]);
-
-  const updateRectangle = useCallback((rect: fabric.Rect, start: fabric.Point, current: fabric.Point) => {
-    const width = Math.abs(current.x - start.x);
-    const height = Math.abs(current.y - start.y);
-    const left = Math.min(start.x, current.x);
-    const top = Math.min(start.y, current.y);
-
-    rect.set({
-      left: left,
-      top: top,
-      width: width,
-      height: height
-    });
-    rect.setCoords();
-  }, []);
-
-  const startDrawingCircle = useCallback((pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const circle = new fabric.Circle({
-      left: pointer.x,
-      top: pointer.y,
-      radius: 0,
-      fill: fillColor,
-      stroke: currentColor,
-      strokeWidth: strokeWidth
-    });
-
-    canvas.add(circle);
-    setDrawingObject(circle);
-  }, [fillColor, currentColor, strokeWidth]);
-
-  const updateCircle = useCallback((circle: fabric.Circle, start: fabric.Point, current: fabric.Point) => {
-    const radius = Math.abs(current.x - start.x) / 2;
-    const left = Math.min(start.x, current.x);
-    const top = Math.min(start.y, current.y);
-
-    circle.set({
-      left: left,
-      top: top,
-      radius: radius
-    });
-    circle.setCoords();
-  }, []);
-
-  const startDrawingLine = useCallback((pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-      stroke: currentColor,
-      strokeWidth: strokeWidth,
-      strokeLineCap: 'round'
-    });
-
-    canvas.add(line);
-    setDrawingObject(line);
-  }, [currentColor, strokeWidth]);
-
-  const updateLine = useCallback((line: fabric.Line, start: fabric.Point, current: fabric.Point) => {
-    line.set({
-      x1: start.x,
-      y1: start.y,
-      x2: current.x,
-      y2: current.y
-    });
-    line.setCoords();
-  }, []);
-
-  const startDrawingArrow = useCallback((pointer: fabric.Point) => {
-    if (!fabricCanvasRef.current) return;
-
-    const canvas = fabricCanvasRef.current;
-    const arrowPath = `M ${pointer.x} ${pointer.y} L ${pointer.x} ${pointer.y}`;
-    
-    const arrow = new fabric.Path(arrowPath, {
-      stroke: currentColor,
-      strokeWidth: strokeWidth,
-      fill: '',
-      strokeLineCap: 'round',
-      strokeLineJoin: 'round'
-    });
-
-    canvas.add(arrow);
-    setDrawingObject(arrow);
-  }, [currentColor, strokeWidth]);
-
-  const updateArrow = useCallback((arrow: fabric.Path, start: fabric.Point, current: fabric.Point) => {
-    const arrowPath = createArrowPath(start.x, start.y, current.x, current.y);
-    arrow.path = fabric.util.parsePath(arrowPath);
-    arrow._setPath(arrowPath);
-    arrow.setCoords();
-  }, [createArrowPath]);
+    saveState();
+  }, [currentColor, saveState]);
 
   // Mouse event handlers
   const handleMouseDown = useCallback((e: fabric.IEvent) => {
@@ -316,6 +192,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     const canvas = fabricCanvasRef.current;
     const pointer = canvas.getPointer(e.e);
 
+    // Handle hand tool (panning)
     if (activeTool === 'hand') {
       canvas.isDragging = true;
       canvas.selection = false;
@@ -324,30 +201,72 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       return;
     }
 
+    // Handle select tool
+    if (activeTool === 'select') {
+      return; // Let fabric handle selection
+    }
+
+    // For drawing tools, prevent default selection
+    canvas.selection = false;
     setIsDrawing(true);
     setStartPoint(pointer);
 
     switch (activeTool) {
       case 'sticky':
         addStickyNote(pointer);
+        setIsDrawing(false);
         break;
       case 'text':
         addText(pointer);
+        setIsDrawing(false);
         break;
       case 'rectangle':
-        startDrawingRectangle(pointer);
+        const rect = new fabric.Rect({
+          left: pointer.x,
+          top: pointer.y,
+          width: 0,
+          height: 0,
+          fill: fillColor,
+          stroke: currentColor,
+          strokeWidth: strokeWidth,
+          rx: 0,
+          ry: 0
+        });
+        canvas.add(rect);
+        setDrawingObject(rect);
         break;
       case 'circle':
-        startDrawingCircle(pointer);
+        const circle = new fabric.Circle({
+          left: pointer.x,
+          top: pointer.y,
+          radius: 0,
+          fill: fillColor,
+          stroke: currentColor,
+          strokeWidth: strokeWidth
+        });
+        canvas.add(circle);
+        setDrawingObject(circle);
         break;
       case 'line':
-        startDrawingLine(pointer);
+        const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
+          stroke: currentColor,
+          strokeWidth: strokeWidth,
+          strokeLineCap: 'round'
+        });
+        canvas.add(line);
+        setDrawingObject(line);
         break;
       case 'arrow':
-        startDrawingArrow(pointer);
+        const arrow = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
+          stroke: currentColor,
+          strokeWidth: strokeWidth,
+          strokeLineCap: 'round'
+        });
+        canvas.add(arrow);
+        setDrawingObject(arrow);
         break;
     }
-  }, [activeTool, addStickyNote, addText, startDrawingRectangle, startDrawingCircle, startDrawingLine, startDrawingArrow]);
+  }, [activeTool, addStickyNote, addText, fillColor, currentColor, strokeWidth]);
 
   const handleMouseMove = useCallback((e: fabric.IEvent) => {
     if (!fabricCanvasRef.current) return;
@@ -355,6 +274,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     const canvas = fabricCanvasRef.current;
     const pointer = canvas.getPointer(e.e);
 
+    // Handle hand tool panning
     if (activeTool === 'hand' && canvas.isDragging) {
       const vpt = canvas.viewportTransform;
       if (vpt) {
@@ -372,21 +292,84 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     // Update drawing object based on tool
     switch (activeTool) {
       case 'rectangle':
-        updateRectangle(drawingObject as fabric.Rect, startPoint, pointer);
+        const rect = drawingObject as fabric.Rect;
+        const width = Math.abs(pointer.x - startPoint.x);
+        const height = Math.abs(pointer.y - startPoint.y);
+        const left = Math.min(startPoint.x, pointer.x);
+        const top = Math.min(startPoint.y, pointer.y);
+
+        rect.set({
+          left: left,
+          top: top,
+          width: width,
+          height: height
+        });
+        rect.setCoords();
         break;
       case 'circle':
-        updateCircle(drawingObject as fabric.Circle, startPoint, pointer);
+        const circle = drawingObject as fabric.Circle;
+        const radius = Math.abs(pointer.x - startPoint.x) / 2;
+        const circleLeft = Math.min(startPoint.x, pointer.x);
+        const circleTop = Math.min(startPoint.y, pointer.y);
+
+        circle.set({
+          left: circleLeft,
+          top: circleTop,
+          radius: radius
+        });
+        circle.setCoords();
         break;
       case 'line':
-        updateLine(drawingObject as fabric.Line, startPoint, pointer);
+        const line = drawingObject as fabric.Line;
+        line.set({
+          x1: startPoint.x,
+          y1: startPoint.y,
+          x2: pointer.x,
+          y2: pointer.y
+        });
+        line.setCoords();
         break;
       case 'arrow':
-        updateArrow(drawingObject as fabric.Path, startPoint, pointer);
+        const arrowLine = drawingObject as fabric.Line;
+        arrowLine.set({
+          x1: startPoint.x,
+          y1: startPoint.y,
+          x2: pointer.x,
+          y2: pointer.y
+        });
+        arrowLine.setCoords();
+        
+        // Add arrowhead
+        const angle = Math.atan2(pointer.y - startPoint.y, pointer.x - startPoint.x);
+        const headLength = 15;
+        
+        // Remove existing arrowhead if any
+        const existingArrowhead = canvas.getObjects().find(obj => obj.name === 'arrowhead');
+        if (existingArrowhead) {
+          canvas.remove(existingArrowhead);
+        }
+        
+        // Create new arrowhead
+        const arrowhead = new fabric.Polygon([
+          { x: 0, y: 0 },
+          { x: -headLength, y: -headLength/2 },
+          { x: -headLength, y: headLength/2 }
+        ], {
+          fill: currentColor,
+          left: pointer.x,
+          top: pointer.y,
+          angle: (angle * 180) / Math.PI,
+          originX: 'center',
+          originY: 'center',
+          name: 'arrowhead'
+        });
+        
+        canvas.add(arrowhead);
         break;
     }
 
     canvas.renderAll();
-  }, [activeTool, isDrawing, startPoint, drawingObject, updateRectangle, updateCircle, updateLine, updateArrow]);
+  }, [activeTool, isDrawing, startPoint, drawingObject, currentColor]);
 
   const handleMouseUp = useCallback(() => {
     if (!fabricCanvasRef.current) return;
@@ -398,18 +381,40 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       canvas.selection = true;
     }
 
+    if (isDrawing && drawingObject) {
+      // For arrows, group the line and arrowhead
+      if (activeTool === 'arrow') {
+        const arrowhead = canvas.getObjects().find(obj => obj.name === 'arrowhead');
+        if (arrowhead) {
+          const group = new fabric.Group([drawingObject, arrowhead], {
+            selectable: true,
+            hasControls: true,
+            hasBorders: true
+          });
+          canvas.remove(drawingObject);
+          canvas.remove(arrowhead);
+          canvas.add(group);
+        }
+      }
+      
+      saveState();
+    }
+
     setIsDrawing(false);
     setStartPoint(null);
     setDrawingObject(null);
 
     // Re-enable selection for select tool
     if (activeTool === 'select') {
+      canvas.selection = true;
       canvas.forEachObject((obj) => {
-        obj.selectable = true;
-        obj.evented = true;
+        if (!obj.excludeFromExport) {
+          obj.selectable = true;
+          obj.evented = true;
+        }
       });
     }
-  }, [activeTool]);
+  }, [activeTool, isDrawing, drawingObject, saveState]);
 
   const undo = useCallback(() => {
     if (!fabricCanvasRef.current || historyIndex <= 0) return;
@@ -420,8 +425,11 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     canvas.loadFromJSON(prevState, () => {
       canvas.renderAll();
       setHistoryIndex(prev => prev - 1);
+      if (showGrid) {
+        addGrid(canvas, width, height);
+      }
     });
-  }, [history, historyIndex]);
+  }, [history, historyIndex, showGrid, addGrid, width, height]);
 
   const redo = useCallback(() => {
     if (!fabricCanvasRef.current || historyIndex >= history.length - 1) return;
@@ -432,8 +440,11 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     canvas.loadFromJSON(nextState, () => {
       canvas.renderAll();
       setHistoryIndex(prev => prev + 1);
+      if (showGrid) {
+        addGrid(canvas, width, height);
+      }
     });
-  }, [history, historyIndex]);
+  }, [history, historyIndex, showGrid, addGrid, width, height]);
 
   const copyObjects = useCallback(() => {
     if (!fabricCanvasRef.current || selectedObjects.length === 0) return;
@@ -463,7 +474,9 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.requestRenderAll();
       });
     });
-  }, [clipboard]);
+    
+    saveState();
+  }, [clipboard, saveState]);
 
   const duplicateObjects = useCallback(() => {
     copyObjects();
@@ -480,8 +493,9 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       activeObjects.forEach(obj => canvas.remove(obj));
       canvas.discardActiveObject();
       canvas.renderAll();
+      saveState();
     }
-  }, []);
+  }, [saveState]);
 
   const selectAll = useCallback(() => {
     if (!fabricCanvasRef.current) return;
@@ -640,14 +654,6 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       setSelectedObjects([]);
     });
 
-    canvas.on('object:added', () => {
-      saveState();
-    });
-
-    canvas.on('object:removed', () => {
-      saveState();
-    });
-
     canvas.on('object:modified', () => {
       saveState();
     });
@@ -661,6 +667,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
           selectable: true
         });
         canvas.renderAll();
+        saveState();
       }
     });
 
@@ -783,8 +790,10 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.selection = true;
         canvas.isDrawingMode = false;
         canvas.forEachObject((obj) => {
-          obj.selectable = true;
-          obj.evented = true;
+          if (!obj.excludeFromExport) {
+            obj.selectable = true;
+            obj.evented = true;
+          }
         });
         break;
       case 'hand':
@@ -803,8 +812,10 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.freeDrawingBrush.color = currentColor;
         canvas.selection = false;
         canvas.forEachObject((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
+          if (!obj.excludeFromExport) {
+            obj.selectable = false;
+            obj.evented = false;
+          }
         });
         break;
       default:
@@ -813,8 +824,10 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.selection = false;
         canvas.isDrawingMode = false;
         canvas.forEachObject((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
+          if (!obj.excludeFromExport) {
+            obj.selectable = false;
+            obj.evented = false;
+          }
         });
         break;
     }
@@ -1128,16 +1141,17 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
 
       {/* Instructions */}
       <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-3 z-30 max-w-xs">
-        <h4 className="text-sm font-semibold text-gray-900 mb-2">✅ FULLY WORKING!</h4>
+        <h4 className="text-sm font-semibold text-gray-900 mb-2">✅ ALL TOOLS WORKING!</h4>
         <div className="text-xs text-gray-600 space-y-1">
           <p>• <strong>V</strong> - Select & move objects</p>
           <p>• <strong>H</strong> - Hand tool (pan canvas)</p>
-          <p>• <strong>P</strong> - Pen tool (FREE DRAWING)</p>
+          <p>• <strong>P</strong> - Pen tool (free drawing)</p>
           <p>• <strong>T</strong> - Text (click & type)</p>
           <p>• <strong>R</strong> - Rectangle (drag to draw)</p>
           <p>• <strong>O</strong> - Circle (drag to draw)</p>
           <p>• <strong>L</strong> - Line (drag to draw)</p>
-          <p>• <strong>S</strong> - Sticky notes</p>
+          <p>• <strong>A</strong> - Arrow (drag to draw)</p>
+          <p>• <strong>S</strong> - Sticky notes (click to add)</p>
           <p>• <strong>Ctrl+Z/Y</strong> - Undo/Redo</p>
           <p>• <strong>Ctrl+C/V/D</strong> - Copy/Paste/Duplicate</p>
           <p>• <strong>Del</strong> - Delete selected</p>
