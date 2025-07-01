@@ -34,7 +34,7 @@ import {
   EyeOff,
   Move,
   MoreHorizontal,
-  Fullscreen,
+  Maximize2 as Fullscreen,
   Map,
   Diamond,
   Star,
