@@ -185,6 +185,22 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     saveState();
   }, [currentColor, saveState]);
 
+  // Update pen tool settings when color or stroke width changes
+  const updatePenTool = useCallback(() => {
+    if (!fabricCanvasRef.current || activeTool !== 'pen') return;
+    
+    const canvas = fabricCanvasRef.current;
+    if (canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.color = currentColor;
+      canvas.freeDrawingBrush.width = strokeWidth;
+    }
+  }, [activeTool, currentColor, strokeWidth]);
+
+  // Call updatePenTool whenever color or stroke width changes
+  useEffect(() => {
+    updatePenTool();
+  }, [updatePenTool]);
+
   // Mouse event handlers
   const handleMouseDown = useCallback((e: fabric.IEvent) => {
     if (!fabricCanvasRef.current) return;
@@ -204,6 +220,22 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     // Handle select tool
     if (activeTool === 'select') {
       return; // Let fabric handle selection
+    }
+
+    // Handle pen tool
+    if (activeTool === 'pen') {
+      return; // Let fabric handle free drawing
+    }
+
+    // Handle eraser tool
+    if (activeTool === 'eraser') {
+      const target = canvas.findTarget(e.e, false);
+      if (target && !target.excludeFromExport) {
+        canvas.remove(target);
+        canvas.renderAll();
+        saveState();
+      }
+      return;
     }
 
     // For drawing tools, prevent default selection
@@ -266,7 +298,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         setDrawingObject(arrow);
         break;
     }
-  }, [activeTool, addStickyNote, addText, fillColor, currentColor, strokeWidth]);
+  }, [activeTool, addStickyNote, addText, fillColor, currentColor, strokeWidth, saveState]);
 
   const handleMouseMove = useCallback((e: fabric.IEvent) => {
     if (!fabricCanvasRef.current) return;
@@ -283,6 +315,16 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.requestRenderAll();
         canvas.lastPosX = e.e.clientX;
         canvas.lastPosY = e.e.clientY;
+      }
+      return;
+    }
+
+    // Handle eraser tool
+    if (activeTool === 'eraser' && e.e.buttons === 1) {
+      const target = canvas.findTarget(e.e, false);
+      if (target && !target.excludeFromExport) {
+        canvas.remove(target);
+        canvas.renderAll();
       }
       return;
     }
@@ -308,7 +350,9 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         break;
       case 'circle':
         const circle = drawingObject as fabric.Circle;
-        const radius = Math.abs(pointer.x - startPoint.x) / 2;
+        const radius = Math.sqrt(
+          Math.pow(pointer.x - startPoint.x, 2) + Math.pow(pointer.y - startPoint.y, 2)
+        ) / 2;
         const circleLeft = Math.min(startPoint.x, pointer.x);
         const circleTop = Math.min(startPoint.y, pointer.y);
 
@@ -737,6 +781,9 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
           case 'p':
             setActiveTool('pen');
             break;
+          case 'e':
+            setActiveTool('eraser');
+            break;
         }
       }
     };
@@ -811,6 +858,18 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.freeDrawingBrush.width = strokeWidth;
         canvas.freeDrawingBrush.color = currentColor;
         canvas.selection = false;
+        canvas.forEachObject((obj) => {
+          if (!obj.excludeFromExport) {
+            obj.selectable = false;
+            obj.evented = false;
+          }
+        });
+        break;
+      case 'eraser':
+        canvas.defaultCursor = 'crosshair';
+        canvas.hoverCursor = 'crosshair';
+        canvas.selection = false;
+        canvas.isDrawingMode = false;
         canvas.forEachObject((obj) => {
           if (!obj.excludeFromExport) {
             obj.selectable = false;
@@ -921,7 +980,10 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
                         style={{ backgroundColor: color }}
                         onClick={() => {
                           setCurrentColor(color);
-                          setShowColorPicker(false);
+                          // Update pen tool immediately if it's active
+                          if (activeTool === 'pen' && fabricCanvasRef.current) {
+                            fabricCanvasRef.current.freeDrawingBrush.color = color;
+                          }
                         }}
                       />
                     ))}
@@ -937,7 +999,14 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
                         min="1"
                         max="20"
                         value={strokeWidth}
-                        onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+                        onChange={(e) => {
+                          const newWidth = parseInt(e.target.value);
+                          setStrokeWidth(newWidth);
+                          // Update pen tool immediately if it's active
+                          if (activeTool === 'pen' && fabricCanvasRef.current) {
+                            fabricCanvasRef.current.freeDrawingBrush.width = newWidth;
+                          }
+                        }}
                         className="w-full"
                       />
                     </div>
@@ -1135,23 +1204,24 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         style={{ 
           width: width, 
           height: height,
-          cursor: activeTool === 'hand' ? 'grab' : activeTool === 'pen' ? 'crosshair' : 'default'
+          cursor: activeTool === 'hand' ? 'grab' : activeTool === 'pen' ? 'crosshair' : activeTool === 'eraser' ? 'crosshair' : 'default'
         }}
       />
 
       {/* Instructions */}
       <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-3 z-30 max-w-xs">
-        <h4 className="text-sm font-semibold text-gray-900 mb-2">✅ ALL TOOLS WORKING!</h4>
+        <h4 className="text-sm font-semibold text-gray-900 mb-2">🎉 ALL TOOLS FIXED!</h4>
         <div className="text-xs text-gray-600 space-y-1">
           <p>• <strong>V</strong> - Select & move objects</p>
           <p>• <strong>H</strong> - Hand tool (pan canvas)</p>
-          <p>• <strong>P</strong> - Pen tool (free drawing)</p>
+          <p>• <strong>P</strong> - Pen tool (retains color/thickness)</p>
           <p>• <strong>T</strong> - Text (click & type)</p>
           <p>• <strong>R</strong> - Rectangle (drag to draw)</p>
           <p>• <strong>O</strong> - Circle (drag to draw)</p>
           <p>• <strong>L</strong> - Line (drag to draw)</p>
           <p>• <strong>A</strong> - Arrow (drag to draw)</p>
           <p>• <strong>S</strong> - Sticky notes (click to add)</p>
+          <p>• <strong>E</strong> - Eraser (click/drag to erase)</p>
           <p>• <strong>Ctrl+Z/Y</strong> - Undo/Redo</p>
           <p>• <strong>Ctrl+C/V/D</strong> - Copy/Paste/Duplicate</p>
           <p>• <strong>Del</strong> - Delete selected</p>
