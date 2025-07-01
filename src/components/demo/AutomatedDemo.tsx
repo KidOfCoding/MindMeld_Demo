@@ -92,6 +92,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
   const [autoIdeas, setAutoIdeas] = useState<any[]>([]);
   const [demoComments, setDemoComments] = useState<any[]>([]);
   const [emojiReactions, setEmojiReactions] = useState<any[]>([]);
+  const [upvoteAnimations, setUpvoteAnimations] = useState<any[]>([]);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [aiPromptText, setAiPromptText] = useState('');
   const [showMermaidChart, setShowMermaidChart] = useState(false);
@@ -100,12 +101,12 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [newSessionModal, setNewSessionModal] = useState(false);
   const [canvasShapes, setCanvasShapes] = useState<any[]>([]);
+  const [innovationDiagram, setInnovationDiagram] = useState<any[]>([]);
+  const [strategyDiagram, setStrategyDiagram] = useState<any[]>([]);
   const [openPanels, setOpenPanels] = useState<string[]>([]);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [aiInsightsData, setAiInsightsData] = useState<any>(null);
   const [showDecisionPopup, setShowDecisionPopup] = useState(false);
-  const [upvotes, setUpvotes] = useState<any[]>([]);
-  const [teamComments, setTeamComments] = useState<any[]>([]);
   
   const demoRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -141,7 +142,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         { type: 'cursor', position: { x: 400, y: 300 }, user: 'Sarah Chen', color: '#10B981', delay: 5500 },
         { type: 'cursor', position: { x: 600, y: 400 }, user: 'Marcus Rodriguez', color: '#F59E0B', delay: 6000 },
         { type: 'cleanup', target: 'cursors', delay: 7500 },
-        { type: 'cleanup', target: 'diagrams', delay: 7800 }
+        { type: 'cleanup', target: 'strategy-diagram', delay: 7800 }
       ]
     },
     {
@@ -161,17 +162,16 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     },
     {
       id: 'new-session-creation',
-      title: '🎯 New Session Creation & Canvas',
-      description: 'Creating a new session with AI Innovation diagram',
+      title: '🎯 New Session Creation & Innovation Hub',
+      description: 'Creating a new session with AI Innovation diagram that stays throughout',
       duration: 8000,
-      narration: 'Now I will create a new collaboration session. Watch as we set up a fresh workspace for our team.',
+      narration: 'Now I will create a new collaboration session. Watch as we set up a fresh workspace with our AI Innovation Hub that will guide our entire session.',
       actions: [
         { type: 'new-session', delay: 500 },
         { type: 'type', text: 'AI Innovation Workshop 2024', delay: 2000 },
         { type: 'click', target: 'create-session-btn', delay: 3500 },
         { type: 'canvas-action', target: 'create-innovation-diagram', delay: 5000 },
-        { type: 'cleanup', target: 'modals', delay: 7500 },
-        { type: 'cleanup', target: 'diagrams', delay: 7800 }
+        { type: 'cleanup', target: 'modals', delay: 7500 }
       ]
     },
     {
@@ -198,23 +198,22 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
       id: 'collaboration-panel',
       title: '👥 Team Collaboration with Voting & Reactions',
       description: 'Collaboration panel with voting, comments, and emoji reactions',
-      duration: 14000,
+      duration: 12000,
       narration: 'Our collaboration panel enables rich team interaction with voting, emoji reactions, real-time chat, and comprehensive team management.',
       actions: [
         { type: 'panel', target: 'collaboration-panel', delay: 500 },
         { type: 'idea', position: { x: 200, y: 150 }, text: 'Implement AI-powered user onboarding', user: 'Sarah Chen', delay: 1500 },
         { type: 'upvote', target: 'idea-1', user: 'Marcus Rodriguez', delay: 2500 },
-        { type: 'upvote', target: 'idea-1', user: 'Emily Watson', delay: 3000 },
-        { type: 'team-comment', position: { x: 250, y: 180 }, text: 'Great idea! This could really improve user retention.', user: 'Marcus Rodriguez', delay: 3500 },
+        { type: 'team-comment', position: { x: 250, y: 180 }, text: 'Great idea! This could really improve user retention.', user: 'Marcus Rodriguez', delay: 3000 },
+        { type: 'upvote', target: 'idea-1', user: 'Emily Watson', delay: 3500 },
         { type: 'emoji', emoji: '👍', position: { x: 250, y: 150 }, user: 'Emily Watson', delay: 4000 },
         { type: 'idea', position: { x: 450, y: 200 }, text: 'Mobile-first design system', user: 'Emily Watson', delay: 5500 },
         { type: 'upvote', target: 'idea-2', user: 'Sarah Chen', delay: 6000 },
-        { type: 'upvote', target: 'idea-2', user: 'Marcus Rodriguez', delay: 6500 },
-        { type: 'team-comment', position: { x: 480, y: 230 }, text: 'Mobile-first is essential for our target audience.', user: 'Sarah Chen', delay: 7000 },
+        { type: 'team-comment', position: { x: 500, y: 230 }, text: 'Mobile-first is essential for our target audience.', user: 'Sarah Chen', delay: 6500 },
+        { type: 'upvote', target: 'idea-2', user: 'Marcus Rodriguez', delay: 7000 },
         { type: 'ai-team-comment', position: { x: 200, y: 180 }, text: 'Based on user data, AI onboarding could increase retention by 40%.', user: 'AI Assistant', delay: 8500 },
-        { type: 'emoji', emoji: '🚀', position: { x: 500, y: 200 }, user: 'Marcus Rodriguez', delay: 10000 },
-        { type: 'upvote', target: 'idea-1', user: 'Project Manager', delay: 11000 },
-        { type: 'cleanup', target: 'emojis', delay: 13500 }
+        { type: 'emoji', emoji: '🚀', position: { x: 500, y: 200 }, user: 'Marcus Rodriguez', delay: 9500 },
+        { type: 'cleanup', target: 'emojis', delay: 11500 }
       ]
     },
     {
@@ -239,16 +238,16 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
       id: 'decision-finalization',
       title: '✅ Decision Finalization & Export',
       description: 'Complete workflow to final decision with export options',
-      duration: 10000,
+      duration: 8000,
       narration: 'Finally, we finalize our decisions based on team consensus and AI insights, then export our collaborative session for stakeholders.',
       actions: [
         { type: 'cursor', position: { x: 200, y: 150 }, user: 'Project Manager', color: '#8B5CF6', delay: 500 },
-        { type: 'team-comment', position: { x: 230, y: 120 }, text: 'Based on votes and AI analysis, we approve the AI onboarding feature!', user: 'Project Manager', delay: 1500 },
-        { type: 'click', target: 'approve-idea', delay: 3000 },
-        { type: 'canvas-action', target: 'finalize-decision', delay: 3500 },
-        { type: 'close-panel', target: 'ai-panel', delay: 6000 },
-        { type: 'highlight', target: 'export-button', delay: 7000, duration: 1500 },
-        { type: 'cleanup', target: 'all', delay: 9500 }
+        { type: 'upvote', target: 'idea-1', user: 'Project Manager', delay: 1500 },
+        { type: 'team-comment', position: { x: 250, y: 180 }, text: 'Approved! Let\'s move forward with AI onboarding as our priority.', user: 'Project Manager', delay: 2000 },
+        { type: 'canvas-action', target: 'finalize-decision', delay: 2500 },
+        { type: 'close-panel', target: 'ai-panel', delay: 4000 },
+        { type: 'highlight', target: 'export-button', delay: 5000, duration: 1500 },
+        { type: 'cleanup', target: 'all', delay: 7500 }
       ]
     }
   ];
@@ -350,9 +349,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
 
       case 'idea':
         if (action.position && action.text && action.user) {
-          const ideaId = `auto-idea-${Date.now()}`;
           setAutoIdeas(prev => [...prev, {
-            id: ideaId,
+            id: `auto-idea-${Date.now()}`,
             text: action.text,
             position: action.position,
             author: action.user,
@@ -363,45 +361,26 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         }
         break;
 
-      case 'vote':
       case 'upvote':
-        if (action.target && action.user) {
-          setAutoIdeas(prev => prev.map(idea => 
-            idea.id === action.target || `auto-idea-${idea.id}` === action.target || idea.text.includes('AI-powered') && action.target === 'idea-1' || idea.text.includes('Mobile-first') && action.target === 'idea-2'
-              ? { ...idea, votes: idea.votes + 1 }
-              : idea
-          ));
-          
-          // Add upvote animation
+        setAutoIdeas(prev => prev.map(idea => 
+          idea.id === action.target 
+            ? { ...idea, votes: idea.votes + 1 }
+            : idea
+        ));
+        
+        // Add upvote animation
+        if (action.user) {
           const upvoteId = `upvote-${Date.now()}`;
-          setUpvotes(prev => [...prev, {
+          setUpvoteAnimations(prev => [...prev, {
             id: upvoteId,
             user: action.user,
-            target: action.target,
             timestamp: new Date()
           }]);
           
+          // Remove upvote animation after 2 seconds
           setTimeout(() => {
-            setUpvotes(prev => prev.filter(u => u.id !== upvoteId));
+            setUpvoteAnimations(prev => prev.filter(u => u.id !== upvoteId));
           }, 2000);
-        }
-        break;
-
-      case 'team-comment':
-        if (action.position && action.text && action.user) {
-          const commentId = `team-comment-${Date.now()}`;
-          setTeamComments(prev => [...prev, {
-            id: commentId,
-            text: action.text,
-            position: action.position,
-            author: action.user,
-            timestamp: new Date(),
-            isTeam: true
-          }]);
-          
-          setTimeout(() => {
-            setTeamComments(prev => prev.filter(c => c.id !== commentId));
-          }, 4000);
         }
         break;
 
@@ -425,6 +404,7 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
 
       case 'comment':
       case 'ai-team-comment':
+      case 'team-comment':
         if (action.position && action.text && action.user) {
           const commentId = `comment-${Date.now()}`;
           setDemoComments(prev => [...prev, {
@@ -433,7 +413,8 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             position: action.position,
             author: action.user,
             timestamp: new Date(),
-            isAI: action.type === 'ai-team-comment'
+            isAI: action.type === 'ai-team-comment',
+            isTeam: action.type === 'team-comment'
           }]);
           
           // Remove comment after 4 seconds
@@ -456,37 +437,33 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             { id: 'strategy-4', type: 'rectangle', position: { x: center.x - 200, y: center.y + 50 }, text: 'Product Vision', color: '#EF4444', width: 120, height: 60 },
             { id: 'strategy-5', type: 'rectangle', position: { x: center.x - 50, y: center.y + 50 }, text: 'Roadmap Planning', color: '#8B5CF6', width: 120, height: 60 },
             { id: 'strategy-6', type: 'rectangle', position: { x: center.x + 100, y: center.y + 50 }, text: 'Success Metrics', color: '#06B6D4', width: 120, height: 60 },
-            // Horizontal connections
+            // Connections
             { id: 'line-h1', type: 'line', startPos: { x: center.x - 80, y: center.y - 70 }, endPos: { x: center.x - 50, y: center.y - 70 }, color: '#6B7280' },
             { id: 'line-h2', type: 'line', startPos: { x: center.x + 70, y: center.y - 70 }, endPos: { x: center.x + 100, y: center.y - 70 }, color: '#6B7280' },
             { id: 'line-h3', type: 'line', startPos: { x: center.x - 80, y: center.y + 80 }, endPos: { x: center.x - 50, y: center.y + 80 }, color: '#6B7280' },
             { id: 'line-h4', type: 'line', startPos: { x: center.x + 70, y: center.y + 80 }, endPos: { x: center.x + 100, y: center.y + 80 }, color: '#6B7280' },
-            // Vertical connections
             { id: 'line-v1', type: 'line', startPos: { x: center.x - 140, y: center.y - 40 }, endPos: { x: center.x - 140, y: center.y + 50 }, color: '#6B7280' },
             { id: 'line-v2', type: 'line', startPos: { x: center.x + 10, y: center.y - 40 }, endPos: { x: center.x + 10, y: center.y + 50 }, color: '#6B7280' },
             { id: 'line-v3', type: 'line', startPos: { x: center.x + 160, y: center.y - 40 }, endPos: { x: center.x + 160, y: center.y + 50 }, color: '#6B7280' }
           ];
-          setCanvasShapes(strategyShapes);
+          setStrategyDiagram(strategyShapes);
         } else if (action.target === 'create-innovation-diagram') {
-          // Clear previous diagram and create AI Innovation Hub with connections
-          setCanvasShapes([]);
-          setTimeout(() => {
-            const innovationShapes = [
-              // Central AI Hub
-              { id: 'ai-hub', type: 'circle', position: { x: center.x - 50, y: center.y - 50 }, text: 'AI Core', color: '#8B5CF6', width: 100, height: 100 },
-              // Surrounding innovation areas
-              { id: 'innovation-1', type: 'rectangle', position: { x: center.x - 250, y: center.y - 150 }, text: 'Machine Learning', color: '#3B82F6', width: 120, height: 60 },
-              { id: 'innovation-2', type: 'rectangle', position: { x: center.x + 100, y: center.y - 150 }, text: 'Natural Language', color: '#10B981', width: 120, height: 60 },
-              { id: 'innovation-3', type: 'rectangle', position: { x: center.x - 250, y: center.y + 50 }, text: 'Computer Vision', color: '#F59E0B', width: 120, height: 60 },
-              { id: 'innovation-4', type: 'rectangle', position: { x: center.x + 100, y: center.y + 50 }, text: 'Predictive Analytics', color: '#EF4444', width: 120, height: 60 },
-              // Connection lines to hub
-              { id: 'hub-line-1', type: 'line', startPos: { x: center.x - 130, y: center.y - 120 }, endPos: { x: center.x - 30, y: center.y - 30 }, color: '#8B5CF6' },
-              { id: 'hub-line-2', type: 'line', startPos: { x: center.x + 120, y: center.y - 120 }, endPos: { x: center.x + 30, y: center.y - 30 }, color: '#8B5CF6' },
-              { id: 'hub-line-3', type: 'line', startPos: { x: center.x - 130, y: center.y + 80 }, endPos: { x: center.x - 30, y: center.y + 30 }, color: '#8B5CF6' },
-              { id: 'hub-line-4', type: 'line', startPos: { x: center.x + 120, y: center.y + 80 }, endPos: { x: center.x + 30, y: center.y + 30 }, color: '#8B5CF6' }
-            ];
-            setCanvasShapes(innovationShapes);
-          }, 500);
+          // Create AI Innovation Hub with connections - STAYS TILL END
+          const innovationShapes = [
+            // Central AI Hub
+            { id: 'ai-hub', type: 'circle', position: { x: center.x - 50, y: center.y - 50 }, text: 'AI Core', color: '#8B5CF6', width: 100, height: 100 },
+            // Surrounding innovation areas
+            { id: 'innovation-1', type: 'rectangle', position: { x: center.x - 250, y: center.y - 150 }, text: 'Machine Learning', color: '#3B82F6', width: 120, height: 60 },
+            { id: 'innovation-2', type: 'rectangle', position: { x: center.x + 100, y: center.y - 150 }, text: 'Natural Language', color: '#10B981', width: 120, height: 60 },
+            { id: 'innovation-3', type: 'rectangle', position: { x: center.x - 250, y: center.y + 50 }, text: 'Computer Vision', color: '#F59E0B', width: 120, height: 60 },
+            { id: 'innovation-4', type: 'rectangle', position: { x: center.x + 100, y: center.y + 50 }, text: 'Predictive Analytics', color: '#EF4444', width: 120, height: 60 },
+            // Connection lines to hub
+            { id: 'hub-line-1', type: 'line', startPos: { x: center.x - 130, y: center.y - 120 }, endPos: { x: center.x - 30, y: center.y - 30 }, color: '#8B5CF6' },
+            { id: 'hub-line-2', type: 'line', startPos: { x: center.x + 120, y: center.y - 120 }, endPos: { x: center.x + 30, y: center.y - 30 }, color: '#8B5CF6' },
+            { id: 'hub-line-3', type: 'line', startPos: { x: center.x - 130, y: center.y + 80 }, endPos: { x: center.x - 30, y: center.y + 30 }, color: '#8B5CF6' },
+            { id: 'hub-line-4', type: 'line', startPos: { x: center.x + 120, y: center.y + 80 }, endPos: { x: center.x + 30, y: center.y + 30 }, color: '#8B5CF6' }
+          ];
+          setInnovationDiagram(innovationShapes);
         } else if (action.target === 'create-rectangle' && action.position) {
           setCanvasShapes(prev => [...prev, {
             id: `shape-${Date.now()}`,
@@ -634,29 +611,27 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
           setEmojiReactions([]);
         } else if (action.target === 'comments') {
           setDemoComments([]);
-          setTeamComments([]);
         } else if (action.target === 'modals') {
           setNewSessionModal(false);
           setShowAIPrompt(false);
           setShowMermaidChart(false);
         } else if (action.target === 'highlights') {
           setHighlightedElement(null);
-        } else if (action.target === 'diagrams') {
-          setCanvasShapes([]);
+        } else if (action.target === 'strategy-diagram') {
+          setStrategyDiagram([]);
         } else if (action.target === 'canvas-shapes') {
-          setCanvasShapes(prev => prev.filter(shape => !shape.id.startsWith('shape-') && !shape.id.startsWith('connector-')));
+          setCanvasShapes([]);
         } else if (action.target === 'all') {
           setCursors([]);
           setEmojiReactions([]);
           setDemoComments([]);
-          setTeamComments([]);
-          setUpvotes([]);
           setHighlightedElement(null);
           setSidebarContent(null);
           setSearchResults([]);
           setNewSessionModal(false);
           setShowAIPrompt(false);
           setShowMermaidChart(false);
+          // Keep innovation diagram - don't clear it
         }
         break;
 
@@ -699,10 +674,11 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
     setCursors([]);
     setAutoIdeas([]);
     setDemoComments([]);
-    setTeamComments([]);
-    setUpvotes([]);
     setEmojiReactions([]);
+    setUpvoteAnimations([]);
     setCanvasShapes([]);
+    setInnovationDiagram([]);
+    setStrategyDiagram([]);
     setOpenPanels([]);
     setHighlightedElement(null);
     setSidebarContent(null);
@@ -949,59 +925,21 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
 
       {/* Upvote Animations */}
       <AnimatePresence>
-        {upvotes.map((upvote) => (
+        {upvoteAnimations.map((upvote) => (
           <motion.div
             key={upvote.id}
             initial={{ opacity: 0, scale: 0.5, y: 0 }}
             animate={{ opacity: 1, scale: 1.2, y: -40 }}
             exit={{ opacity: 0, scale: 0.5, y: -80 }}
             transition={{ duration: 0.8 }}
-            className="absolute pointer-events-none z-[75] text-lg"
+            className="absolute pointer-events-none z-[75] flex items-center space-x-1"
             style={{
-              left: Math.random() * 100 + 200,
-              top: Math.random() * 100 + 150,
+              left: Math.random() * 200 + 300,
+              top: Math.random() * 100 + 200,
             }}
           >
-            <div className="flex items-center space-x-1 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-              <ThumbsUp className="w-3 h-3" />
-              <span>+1</span>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      {/* Team Comments */}
-      <AnimatePresence>
-        {teamComments.map((comment) => (
-          <motion.div
-            key={comment.id}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute pointer-events-none z-[65]"
-            style={{
-              left: comment.position.x + 20,
-              top: comment.position.y - 10,
-            }}
-          >
-            <div className={`max-w-xs border rounded-lg p-2 shadow-lg ${
-              comment.author === 'Project Manager' && comment.text.includes('approve')
-                ? 'bg-green-50 border-green-300' 
-                : 'bg-blue-50 border-blue-200'
-            }`}>
-              <div className="flex items-center space-x-2 mb-1">
-                <Users className="w-3 h-3 text-blue-600" />
-                <span className="text-xs font-medium text-blue-700">
-                  {comment.author}
-                </span>
-                {comment.author === 'Project Manager' && (
-                  <Crown className="w-3 h-3 text-yellow-500" />
-                )}
-              </div>
-              <p className="text-xs text-blue-600">
-                {comment.text}
-              </p>
-            </div>
+            <ThumbsUp className="w-4 h-4 text-green-600" />
+            <span className="text-sm font-bold text-green-600">+1</span>
           </motion.div>
         ))}
       </AnimatePresence>
@@ -1026,10 +964,117 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
         ))}
       </AnimatePresence>
 
-      {/* Canvas Shapes - Professional Diagrams with Connections */}
+      {/* Strategy Diagram - Only during startup */}
+      <AnimatePresence>
+        {strategyDiagram.map((shape) => {
+          if (!shape || !shape.id) return null;
+          
+          const position = shape.position || shape.startPos || { x: 0, y: 0 };
+          
+          return (
+            <motion.div
+              key={shape.id}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute pointer-events-none z-[50]"
+              style={{
+                left: position.x,
+                top: position.y,
+              }}
+            >
+              {shape.type === 'line' ? (
+                <svg width="200" height="150" className="absolute" style={{ left: -100, top: -75 }}>
+                  <line
+                    x1={shape.startPos ? 100 : 0}
+                    y1={shape.startPos ? 75 : 0}
+                    x2={shape.endPos ? shape.endPos.x - position.x + 100 : 100}
+                    y2={shape.endPos ? shape.endPos.y - position.y + 75 : 100}
+                    stroke={shape.color}
+                    strokeWidth="2"
+                    className="drop-shadow-sm"
+                  />
+                </svg>
+              ) : (
+                <div 
+                  className={`flex items-center justify-center text-white text-xs font-medium shadow-lg ${
+                    shape.type === 'rectangle' ? 'rounded-lg' :
+                    shape.type === 'circle' ? 'rounded-full' :
+                    'transform rotate-45 rounded-lg'
+                  }`}
+                  style={{ 
+                    backgroundColor: shape.color,
+                    width: shape.width || (shape.type === 'circle' ? '80px' : '120px'),
+                    height: shape.height || (shape.type === 'circle' ? '80px' : '60px')
+                  }}
+                >
+                  <span className={shape.type === 'diamond' ? 'transform -rotate-45' : ''}>
+                    {shape.text}
+                  </span>
+                </div>
+              )}
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+
+      {/* Innovation Diagram - Stays till end */}
+      <AnimatePresence>
+        {innovationDiagram.map((shape) => {
+          if (!shape || !shape.id) return null;
+          
+          const position = shape.position || shape.startPos || { x: 0, y: 0 };
+          
+          return (
+            <motion.div
+              key={shape.id}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute pointer-events-none z-[50]"
+              style={{
+                left: position.x,
+                top: position.y,
+              }}
+            >
+              {shape.type === 'line' ? (
+                <svg width="200" height="150" className="absolute" style={{ left: -100, top: -75 }}>
+                  <line
+                    x1={shape.startPos ? 100 : 0}
+                    y1={shape.startPos ? 75 : 0}
+                    x2={shape.endPos ? shape.endPos.x - position.x + 100 : 100}
+                    y2={shape.endPos ? shape.endPos.y - position.y + 75 : 100}
+                    stroke={shape.color}
+                    strokeWidth="3"
+                    className="drop-shadow-sm"
+                  />
+                </svg>
+              ) : (
+                <div 
+                  className={`flex items-center justify-center text-white text-xs font-medium shadow-lg ${
+                    shape.type === 'rectangle' ? 'rounded-lg' :
+                    shape.type === 'circle' ? 'rounded-full' :
+                    'transform rotate-45 rounded-lg'
+                  }`}
+                  style={{ 
+                    backgroundColor: shape.color,
+                    width: shape.width || (shape.type === 'circle' ? '100px' : '120px'),
+                    height: shape.height || (shape.type === 'circle' ? '100px' : '60px')
+                  }}
+                >
+                  <span className={shape.type === 'diamond' ? 'transform -rotate-45' : ''}>
+                    {shape.text}
+                  </span>
+                </div>
+              )}
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+
+      {/* Canvas Shapes - Only during canvas collaboration */}
       <AnimatePresence>
         {canvasShapes.map((shape) => {
-          // Ensure shape has required properties
           if (!shape || !shape.id) return null;
           
           const position = shape.position || shape.startPos || { x: 0, y: 0 };
@@ -1098,25 +1143,32 @@ export const AutomatedDemo: React.FC<AutomatedDemoProps> = ({ onDemoComplete }) 
             <div className={`max-w-xs border rounded-lg p-2 shadow-lg ${
               comment.isAI 
                 ? 'bg-purple-50 border-purple-200' 
-                : 'bg-white border-gray-200'
+                : comment.isTeam
+                  ? 'bg-blue-50 border-blue-200'
+                  : 'bg-white border-gray-200'
             }`}>
               <div className="flex items-center space-x-2 mb-1">
                 {comment.isAI ? (
                   <Brain className="w-3 h-3 text-purple-600" />
+                ) : comment.isTeam ? (
+                  <Users className="w-3 h-3 text-blue-600" />
                 ) : (
                   <MessageSquare className="w-3 h-3 text-blue-600" />
                 )}
                 <span className={`text-xs font-medium ${
-                  comment.isAI ? 'text-purple-700' : 'text-gray-700'
+                  comment.isAI ? 'text-purple-700' : comment.isTeam ? 'text-blue-700' : 'text-gray-700'
                 }`}>
                   {comment.author}
                 </span>
                 {comment.isAI && (
                   <span className="text-xs bg-purple-100 text-purple-600 px-1 rounded">AI</span>
                 )}
+                {comment.isTeam && (
+                  <span className="text-xs bg-blue-100 text-blue-600 px-1 rounded">Team</span>
+                )}
               </div>
               <p className={`text-xs ${
-                comment.isAI ? 'text-purple-600' : 'text-gray-600'
+                comment.isAI ? 'text-purple-600' : comment.isTeam ? 'text-blue-600' : 'text-gray-600'
               }`}>
                 {comment.text}
               </p>
