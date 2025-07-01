@@ -15,12 +15,22 @@
     "react-dom": "^18.3.1",
     "framer-motion": "^10.16.16",
     "react-beautiful-dnd": "^13.1.1",
-    "@types/react-beautiful-dnd": "^13.1.8"
+    "@types/react-beautiful-dnd": "^13.1.8",
+    "fabric": "^5.3.0",
+    "konva": "^9.2.0",
+    "react-konva": "^18.2.10",
+    "uuid": "^9.0.1",
+    "lodash": "^4.17.21",
+    "react-color": "^2.19.3",
+    "react-hotkeys-hook": "^4.4.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^9.0.7",
+    "@types/lodash": "^4.14.202",
+    "@types/react-color": "^3.0.9",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.18",
     "eslint": "^9.9.1",
