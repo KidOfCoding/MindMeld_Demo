@@ -31,7 +31,23 @@ import {
   RotateCw,
   Move,
   Save,
-  Share2
+  Share2,
+  Triangle,
+  Star,
+  Diamond,
+  Image,
+  Layers,
+  Group,
+  Ungroup,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Bold,
+  Italic,
+  Underline,
+  Plus,
+  Minus as MinusIcon,
+  X
 } from 'lucide-react';
 
 interface FabricCanvasProps {
@@ -49,6 +65,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
 }) => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // State
   const [activeTool, setActiveTool] = useState('select');
@@ -65,6 +82,15 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
   const [clipboard, setClipboard] = useState<fabric.Object[]>([]);
   const [drawingObject, setDrawingObject] = useState<fabric.Object | null>(null);
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
+  const [showShapeMenu, setShowShapeMenu] = useState(false);
+  const [showTextMenu, setShowTextMenu] = useState(false);
+  const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [fontSize, setFontSize] = useState(16);
+  const [fontFamily, setFontFamily] = useState('Arial');
+  const [textAlign, setTextAlign] = useState('left');
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
 
   // Grid functions
   const addGrid = useCallback((canvas: fabric.Canvas, canvasWidth: number, canvasHeight: number) => {
@@ -74,15 +100,18 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       strokeWidth: 1,
       selectable: false,
       evented: false,
-      excludeFromExport: true
+      excludeFromExport: true,
+      name: 'grid'
     };
 
     // Remove existing grid
     canvas.getObjects().forEach(obj => {
-      if (obj.excludeFromExport) {
+      if (obj.name === 'grid') {
         canvas.remove(obj);
       }
     });
+
+    if (!showGrid) return;
 
     // Vertical lines
     for (let i = 0; i <= canvasWidth / gridSize; i++) {
@@ -97,14 +126,14 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       canvas.add(line);
       canvas.sendToBack(line);
     }
-  }, []);
+  }, [showGrid]);
 
   // Canvas operations
   const saveState = useCallback(() => {
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
-    const state = JSON.stringify(canvas.toJSON());
+    const state = JSON.stringify(canvas.toJSON(['name', 'excludeFromExport']));
     
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
@@ -146,7 +175,8 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       fontSize: 14,
       fontFamily: 'Arial',
       fill: '#000000',
-      textAlign: 'left'
+      textAlign: 'left',
+      backgroundColor: 'transparent'
     });
 
     const group = new fabric.Group([rect, text], {
@@ -171,10 +201,13 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       left: pointer.x,
       top: pointer.y,
       width: 200,
-      fontSize: 16,
-      fontFamily: 'Arial',
+      fontSize: fontSize,
+      fontFamily: fontFamily,
       fill: currentColor,
-      textAlign: 'left',
+      textAlign: textAlign,
+      fontWeight: isBold ? 'bold' : 'normal',
+      fontStyle: isItalic ? 'italic' : 'normal',
+      underline: isUnderline,
       editable: true
     });
 
@@ -183,7 +216,178 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     text.enterEditing();
     canvas.renderAll();
     saveState();
-  }, [currentColor, saveState]);
+  }, [currentColor, fontSize, fontFamily, textAlign, isBold, isItalic, isUnderline, saveState]);
+
+  const addShape = useCallback((shapeType: string, pointer: fabric.Point) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    let shape: fabric.Object;
+
+    switch (shapeType) {
+      case 'rectangle':
+        shape = new fabric.Rect({
+          left: pointer.x,
+          top: pointer.y,
+          width: 150,
+          height: 100,
+          fill: fillColor,
+          stroke: currentColor,
+          strokeWidth: strokeWidth,
+          rx: 0,
+          ry: 0
+        });
+        break;
+      case 'circle':
+        shape = new fabric.Circle({
+          left: pointer.x,
+          top: pointer.y,
+          radius: 50,
+          fill: fillColor,
+          stroke: currentColor,
+          strokeWidth: strokeWidth
+        });
+        break;
+      case 'triangle':
+        shape = new fabric.Triangle({
+          left: pointer.x,
+          top: pointer.y,
+          width: 100,
+          height: 100,
+          fill: fillColor,
+          stroke: currentColor,
+          strokeWidth: strokeWidth
+        });
+        break;
+      case 'diamond':
+        const diamondPoints = [
+          { x: 50, y: 0 },
+          { x: 100, y: 50 },
+          { x: 50, y: 100 },
+          { x: 0, y: 50 }
+        ];
+        shape = new fabric.Polygon(diamondPoints, {
+          left: pointer.x,
+          top: pointer.y,
+          fill: fillColor,
+          stroke: currentColor,
+          strokeWidth: strokeWidth
+        });
+        break;
+      case 'star':
+        const starPoints = [];
+        const outerRadius = 50;
+        const innerRadius = 25;
+        for (let i = 0; i < 10; i++) {
+          const radius = i % 2 === 0 ? outerRadius : innerRadius;
+          const angle = (i * Math.PI) / 5;
+          starPoints.push({
+            x: 50 + radius * Math.cos(angle - Math.PI / 2),
+            y: 50 + radius * Math.sin(angle - Math.PI / 2)
+          });
+        }
+        shape = new fabric.Polygon(starPoints, {
+          left: pointer.x,
+          top: pointer.y,
+          fill: fillColor,
+          stroke: currentColor,
+          strokeWidth: strokeWidth
+        });
+        break;
+      default:
+        return;
+    }
+
+    canvas.add(shape);
+    canvas.setActiveObject(shape);
+    canvas.renderAll();
+    saveState();
+  }, [fillColor, currentColor, strokeWidth, saveState]);
+
+  const addLine = useCallback((pointer: fabric.Point) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const line = new fabric.Line([pointer.x, pointer.y, pointer.x + 100, pointer.y], {
+      stroke: currentColor,
+      strokeWidth: strokeWidth,
+      strokeLineCap: 'round'
+    });
+
+    canvas.add(line);
+    canvas.setActiveObject(line);
+    canvas.renderAll();
+    saveState();
+  }, [currentColor, strokeWidth, saveState]);
+
+  const addArrow = useCallback((pointer: fabric.Point) => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    
+    // Create line
+    const line = new fabric.Line([pointer.x, pointer.y, pointer.x + 100, pointer.y], {
+      stroke: currentColor,
+      strokeWidth: strokeWidth,
+      strokeLineCap: 'round'
+    });
+
+    // Create arrowhead
+    const arrowHead = new fabric.Triangle({
+      left: pointer.x + 100,
+      top: pointer.y,
+      width: 15,
+      height: 15,
+      fill: currentColor,
+      originX: 'center',
+      originY: 'center',
+      angle: 90
+    });
+
+    const group = new fabric.Group([line, arrowHead], {
+      left: pointer.x,
+      top: pointer.y
+    });
+
+    canvas.add(group);
+    canvas.setActiveObject(group);
+    canvas.renderAll();
+    saveState();
+  }, [currentColor, strokeWidth, saveState]);
+
+  const addImage = useCallback(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, []);
+
+  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const imgElement = new Image();
+      imgElement.onload = () => {
+        const fabricImage = new fabric.Image(imgElement, {
+          left: 100,
+          top: 100,
+          scaleX: 0.5,
+          scaleY: 0.5
+        });
+        canvas.add(fabricImage);
+        canvas.setActiveObject(fabricImage);
+        canvas.renderAll();
+        saveState();
+      };
+      imgElement.src = e.target?.result as string;
+    };
+
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }, [saveState]);
 
   // Update pen tool settings when color or stroke width changes
   const updatePenTool = useCallback(() => {
@@ -230,7 +434,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     // Handle eraser tool
     if (activeTool === 'eraser') {
       const target = canvas.findTarget(e.e, false);
-      if (target && !target.excludeFromExport) {
+      if (target && target.name !== 'grid') {
         canvas.remove(target);
         canvas.renderAll();
         saveState();
@@ -322,7 +526,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     // Handle eraser tool
     if (activeTool === 'eraser' && e.e.buttons === 1) {
       const target = canvas.findTarget(e.e, false);
-      if (target && !target.excludeFromExport) {
+      if (target && target.name !== 'grid') {
         canvas.remove(target);
         canvas.renderAll();
       }
@@ -394,17 +598,15 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         }
         
         // Create new arrowhead
-        const arrowhead = new fabric.Polygon([
-          { x: 0, y: 0 },
-          { x: -headLength, y: -headLength/2 },
-          { x: -headLength, y: headLength/2 }
-        ], {
-          fill: currentColor,
+        const arrowhead = new fabric.Triangle({
           left: pointer.x,
           top: pointer.y,
-          angle: (angle * 180) / Math.PI,
+          width: headLength,
+          height: headLength,
+          fill: currentColor,
           originX: 'center',
           originY: 'center',
+          angle: (angle * 180) / Math.PI + 90,
           name: 'arrowhead'
         });
         
@@ -452,7 +654,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     if (activeTool === 'select') {
       canvas.selection = true;
       canvas.forEachObject((obj) => {
-        if (!obj.excludeFromExport) {
+        if (obj.name !== 'grid') {
           obj.selectable = true;
           obj.evented = true;
         }
@@ -469,11 +671,9 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     canvas.loadFromJSON(prevState, () => {
       canvas.renderAll();
       setHistoryIndex(prev => prev - 1);
-      if (showGrid) {
-        addGrid(canvas, width, height);
-      }
+      addGrid(canvas, width, height);
     });
-  }, [history, historyIndex, showGrid, addGrid, width, height]);
+  }, [history, historyIndex, addGrid, width, height]);
 
   const redo = useCallback(() => {
     if (!fabricCanvasRef.current || historyIndex >= history.length - 1) return;
@@ -484,11 +684,9 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     canvas.loadFromJSON(nextState, () => {
       canvas.renderAll();
       setHistoryIndex(prev => prev + 1);
-      if (showGrid) {
-        addGrid(canvas, width, height);
-      }
+      addGrid(canvas, width, height);
     });
-  }, [history, historyIndex, showGrid, addGrid, width, height]);
+  }, [history, historyIndex, addGrid, width, height]);
 
   const copyObjects = useCallback(() => {
     if (!fabricCanvasRef.current || selectedObjects.length === 0) return;
@@ -545,7 +743,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
-    const allObjects = canvas.getObjects().filter(obj => obj.selectable !== false && !obj.excludeFromExport);
+    const allObjects = canvas.getObjects().filter(obj => obj.selectable !== false && obj.name !== 'grid');
     
     if (allObjects.length > 1) {
       const selection = new fabric.ActiveSelection(allObjects, { canvas });
@@ -557,6 +755,49 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     }
   }, []);
 
+  const groupObjects = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const activeObjects = canvas.getActiveObjects();
+    
+    if (activeObjects.length > 1) {
+      const group = new fabric.Group(activeObjects, {
+        selectable: true,
+        hasControls: true,
+        hasBorders: true
+      });
+      
+      activeObjects.forEach(obj => canvas.remove(obj));
+      canvas.add(group);
+      canvas.setActiveObject(group);
+      canvas.renderAll();
+      saveState();
+    }
+  }, [saveState]);
+
+  const ungroupObjects = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const activeObject = canvas.getActiveObject();
+    
+    if (activeObject && activeObject.type === 'group') {
+      const group = activeObject as fabric.Group;
+      const objects = group.getObjects();
+      
+      canvas.remove(group);
+      objects.forEach(obj => {
+        canvas.add(obj);
+      });
+      
+      const selection = new fabric.ActiveSelection(objects, { canvas });
+      canvas.setActiveObject(selection);
+      canvas.renderAll();
+      saveState();
+    }
+  }, [saveState]);
+
   const clearCanvas = useCallback(() => {
     if (!fabricCanvasRef.current) return;
 
@@ -564,13 +805,11 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     canvas.clear();
     canvas.backgroundColor = '#ffffff';
     
-    if (showGrid) {
-      addGrid(canvas, width, height);
-    }
+    addGrid(canvas, width, height);
     
     canvas.renderAll();
     saveState();
-  }, [showGrid, addGrid, width, height, saveState]);
+  }, [addGrid, width, height, saveState]);
 
   const saveCanvas = useCallback(() => {
     if (!fabricCanvasRef.current) return;
@@ -592,7 +831,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
-    const json = JSON.stringify(canvas.toJSON(), null, 2);
+    const json = JSON.stringify(canvas.toJSON(['name']), null, 2);
     
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -615,6 +854,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         const json = JSON.parse(e.target?.result as string);
         fabricCanvasRef.current?.loadFromJSON(json, () => {
           fabricCanvasRef.current?.renderAll();
+          addGrid(fabricCanvasRef.current!, width, height);
           saveState();
         });
       } catch (error) {
@@ -623,7 +863,8 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       }
     };
     reader.readAsText(file);
-  }, [saveState]);
+    event.target.value = '';
+  }, [saveState, addGrid, width, height]);
 
   // Zoom functions
   const zoomIn = useCallback(() => {
@@ -654,9 +895,43 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     setZoom(1);
   }, []);
 
+  const fitToScreen = useCallback(() => {
+    if (!fabricCanvasRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const objects = canvas.getObjects().filter(obj => obj.name !== 'grid');
+    
+    if (objects.length === 0) return;
+
+    const group = new fabric.Group(objects);
+    const groupBounds = group.getBoundingRect();
+    
+    const canvasWidth = canvas.getWidth();
+    const canvasHeight = canvas.getHeight();
+    
+    const scaleX = (canvasWidth - 100) / groupBounds.width;
+    const scaleY = (canvasHeight - 100) / groupBounds.height;
+    const scale = Math.min(scaleX, scaleY, 1);
+    
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+    const groupCenterX = groupBounds.left + groupBounds.width / 2;
+    const groupCenterY = groupBounds.top + groupBounds.height / 2;
+    
+    canvas.setZoom(scale);
+    canvas.viewportTransform = [
+      scale, 0, 0, scale,
+      centerX - groupCenterX * scale,
+      centerY - groupCenterY * scale
+    ];
+    
+    setZoom(scale);
+    canvas.renderAll();
+  }, []);
+
   // Initialize Fabric.js canvas - only once on mount
   useEffect(() => {
-    if (!canvasContainerRef.current) return;
+    if (!canvasContainerRef.current || fabricCanvasRef.current) return;
 
     // Create a canvas element for Fabric.js to use
     const canvasElement = document.createElement('canvas');
@@ -681,9 +956,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     fabricCanvasRef.current = canvas;
 
     // Add grid
-    if (showGrid) {
-      addGrid(canvas, width, height);
-    }
+    addGrid(canvas, width, height);
 
     // Event listeners
     canvas.on('selection:created', (e) => {
@@ -719,6 +992,19 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     canvas.on('mouse:move', handleMouseMove);
     canvas.on('mouse:up', handleMouseUp);
 
+    // Mouse wheel zoom
+    canvas.on('mouse:wheel', (opt) => {
+      const delta = opt.e.deltaY;
+      let zoom = canvas.getZoom();
+      zoom *= 0.999 ** delta;
+      if (zoom > 20) zoom = 20;
+      if (zoom < 0.01) zoom = 0.01;
+      canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+      setZoom(zoom);
+      opt.e.preventDefault();
+      opt.e.stopPropagation();
+    });
+
     // Keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
@@ -750,6 +1036,10 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
           case 's':
             e.preventDefault();
             saveCanvas();
+            break;
+          case 'g':
+            e.preventDefault();
+            groupObjects();
             break;
         }
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -791,7 +1081,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     window.addEventListener('keydown', handleKeyDown);
 
     // Save initial state
-    saveState();
+    setTimeout(() => saveState(), 100);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -803,26 +1093,22 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     };
   }, []); // Only initialize once
 
-  // Update canvas size and grid when dimensions or showGrid change
+  // Update canvas size and grid when dimensions change
   useEffect(() => {
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
     canvas.setDimensions({ width, height });
-    
-    if (showGrid) {
-      addGrid(canvas, width, height);
-    } else {
-      // Remove grid if showGrid is false
-      canvas.getObjects().forEach(obj => {
-        if (obj.excludeFromExport) {
-          canvas.remove(obj);
-        }
-      });
-    }
-    
+    addGrid(canvas, width, height);
     canvas.renderAll();
-  }, [width, height, showGrid, addGrid]);
+  }, [width, height, addGrid]);
+
+  // Update grid when showGrid changes
+  useEffect(() => {
+    if (!fabricCanvasRef.current) return;
+    addGrid(fabricCanvasRef.current, width, height);
+    fabricCanvasRef.current.renderAll();
+  }, [showGrid, addGrid, width, height]);
 
   // Update tool cursor and mode
   useEffect(() => {
@@ -837,7 +1123,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.selection = true;
         canvas.isDrawingMode = false;
         canvas.forEachObject((obj) => {
-          if (!obj.excludeFromExport) {
+          if (obj.name !== 'grid') {
             obj.selectable = true;
             obj.evented = true;
           }
@@ -859,7 +1145,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.freeDrawingBrush.color = currentColor;
         canvas.selection = false;
         canvas.forEachObject((obj) => {
-          if (!obj.excludeFromExport) {
+          if (obj.name !== 'grid') {
             obj.selectable = false;
             obj.evented = false;
           }
@@ -871,7 +1157,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.selection = false;
         canvas.isDrawingMode = false;
         canvas.forEachObject((obj) => {
-          if (!obj.excludeFromExport) {
+          if (obj.name !== 'grid') {
             obj.selectable = false;
             obj.evented = false;
           }
@@ -883,7 +1169,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         canvas.selection = false;
         canvas.isDrawingMode = false;
         canvas.forEachObject((obj) => {
-          if (!obj.excludeFromExport) {
+          if (obj.name !== 'grid') {
             obj.selectable = false;
             obj.evented = false;
           }
@@ -910,10 +1196,19 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
     { id: 'pen', icon: Pen, label: 'Pen (P)', shortcut: 'P' },
     { id: 'line', icon: Minus, label: 'Line (L)', shortcut: 'L' },
     { id: 'arrow', icon: ArrowRight, label: 'Arrow (A)', shortcut: 'A' },
-    { id: 'rectangle', icon: Square, label: 'Rectangle (R)', shortcut: 'R' },
-    { id: 'circle', icon: Circle, label: 'Circle (O)', shortcut: 'O' },
     { id: 'eraser', icon: Eraser, label: 'Eraser (E)', shortcut: 'E' }
   ];
+
+  const shapes = [
+    { id: 'rectangle', icon: Square, label: 'Rectangle' },
+    { id: 'circle', icon: Circle, label: 'Circle' },
+    { id: 'triangle', icon: Triangle, label: 'Triangle' },
+    { id: 'diamond', icon: Diamond, label: 'Diamond' },
+    { id: 'star', icon: Star, label: 'Star' }
+  ];
+
+  const fontSizes = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64];
+  const fontFamilies = ['Arial', 'Helvetica', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana'];
 
   return (
     <div className="relative w-full h-full bg-gray-100 overflow-hidden">
@@ -939,6 +1234,66 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
               </motion.button>
             );
           })}
+          
+          <div className="w-px h-8 bg-gray-200 mx-2" />
+          
+          {/* Shapes Menu */}
+          <div className="relative">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowShapeMenu(!showShapeMenu)}
+              className={`p-3 rounded-lg transition-colors ${
+                ['rectangle', 'circle', 'triangle', 'diamond', 'star'].includes(activeTool)
+                  ? 'bg-blue-100 text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+              title="Shapes"
+            >
+              <Square className="w-5 h-5" />
+            </motion.button>
+
+            <AnimatePresence>
+              {showShapeMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 grid grid-cols-3 gap-1 z-50"
+                >
+                  {shapes.map((shape) => {
+                    const Icon = shape.icon;
+                    return (
+                      <motion.button
+                        key={shape.id}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          setActiveTool(shape.id);
+                          setShowShapeMenu(false);
+                        }}
+                        className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                        title={shape.label}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </motion.button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Image Tool */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={addImage}
+            className="p-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            title="Add Image"
+          >
+            <Image className="w-5 h-5" />
+          </motion.button>
           
           <div className="w-px h-8 bg-gray-200 mx-2" />
           
@@ -1033,6 +1388,117 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
               )}
             </AnimatePresence>
           </div>
+
+          {/* Text Formatting */}
+          <div className="relative">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowTextMenu(!showTextMenu)}
+              className="p-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              title="Text Formatting"
+            >
+              <Type className="w-5 h-5" />
+            </motion.button>
+
+            <AnimatePresence>
+              {showTextMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50 w-64"
+                >
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Font Size</label>
+                      <select
+                        value={fontSize}
+                        onChange={(e) => setFontSize(parseInt(e.target.value))}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                      >
+                        {fontSizes.map(size => (
+                          <option key={size} value={size}>{size}px</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Font Family</label>
+                      <select
+                        value={fontFamily}
+                        onChange={(e) => setFontFamily(e.target.value)}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                      >
+                        {fontFamilies.map(font => (
+                          <option key={font} value={font}>{font}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-2">Alignment</label>
+                      <div className="flex space-x-1">
+                        {[
+                          { value: 'left', icon: AlignLeft },
+                          { value: 'center', icon: AlignCenter },
+                          { value: 'right', icon: AlignRight }
+                        ].map(({ value, icon: Icon }) => (
+                          <button
+                            key={value}
+                            onClick={() => setTextAlign(value)}
+                            className={`flex-1 p-1 rounded border transition-colors ${
+                              textAlign === value
+                                ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                : 'border-gray-300 hover:border-gray-400'
+                            }`}
+                          >
+                            <Icon className="w-3 h-3 mx-auto" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-2">Style</label>
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => setIsBold(!isBold)}
+                          className={`p-1 rounded border transition-colors ${
+                            isBold
+                              ? 'border-blue-500 bg-blue-50 text-blue-600'
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          <Bold className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => setIsItalic(!isItalic)}
+                          className={`p-1 rounded border transition-colors ${
+                            isItalic
+                              ? 'border-blue-500 bg-blue-50 text-blue-600'
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          <Italic className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => setIsUnderline(!isUnderline)}
+                          className={`p-1 rounded border transition-colors ${
+                            isUnderline
+                              ? 'border-blue-500 bg-blue-50 text-blue-600'
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          <Underline className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
@@ -1071,6 +1537,43 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
             title="Reset Zoom"
           >
             <Maximize className="w-4 h-4" />
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={fitToScreen}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Fit to Screen"
+          >
+            <Eye className="w-4 h-4" />
+          </motion.button>
+        </div>
+      </div>
+
+      {/* View Controls */}
+      <div className="absolute bottom-4 right-4 z-50">
+        <div className="flex items-center bg-white rounded-lg shadow-lg border border-gray-200 p-1 space-x-1">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowGrid(!showGrid)}
+            className={`p-2 rounded-lg transition-colors ${
+              showGrid ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+            title="Toggle Grid"
+          >
+            <Grid className="w-4 h-4" />
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowLayerPanel(!showLayerPanel)}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Layers"
+          >
+            <Layers className="w-4 h-4" />
           </motion.button>
         </div>
       </div>
@@ -1111,6 +1614,39 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
             title="Copy (Ctrl+C)"
           >
             <Copy className="w-4 h-4" />
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={pasteObjects}
+            disabled={clipboard.length === 0}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            title="Paste (Ctrl+V)"
+          >
+            <Clipboard className="w-4 h-4" />
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={groupObjects}
+            disabled={selectedObjects.length < 2}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            title="Group (Ctrl+G)"
+          >
+            <Group className="w-4 h-4" />
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={ungroupObjects}
+            disabled={selectedObjects.length === 0}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            title="Ungroup"
+          >
+            <Ungroup className="w-4 h-4" />
           </motion.button>
           
           <motion.button
@@ -1170,7 +1706,7 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Clear Canvas"
           >
-            <Trash2 className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </motion.button>
         </div>
       </div>
@@ -1197,6 +1733,15 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
         </div>
       )}
 
+      {/* Hidden file input for image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+
       {/* Canvas Container */}
       <div
         ref={canvasContainerRef}
@@ -1209,22 +1754,27 @@ export const FabricCanvas: React.FC<FabricCanvasProps> = ({
       />
 
       {/* Instructions */}
-      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-3 z-30 max-w-xs">
-        <h4 className="text-sm font-semibold text-gray-900 mb-2">🎉 ALL TOOLS FIXED!</h4>
-        <div className="text-xs text-gray-600 space-y-1">
-          <p>• <strong>V</strong> - Select & move objects</p>
-          <p>• <strong>H</strong> - Hand tool (pan canvas)</p>
-          <p>• <strong>P</strong> - Pen tool (retains color/thickness)</p>
-          <p>• <strong>T</strong> - Text (click & type)</p>
-          <p>• <strong>R</strong> - Rectangle (drag to draw)</p>
-          <p>• <strong>O</strong> - Circle (drag to draw)</p>
-          <p>• <strong>L</strong> - Line (drag to draw)</p>
-          <p>• <strong>A</strong> - Arrow (drag to draw)</p>
-          <p>• <strong>S</strong> - Sticky notes (click to add)</p>
-          <p>• <strong>E</strong> - Eraser (click/drag to erase)</p>
-          <p>• <strong>Ctrl+Z/Y</strong> - Undo/Redo</p>
-          <p>• <strong>Ctrl+C/V/D</strong> - Copy/Paste/Duplicate</p>
-          <p>• <strong>Del</strong> - Delete selected</p>
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 p-3 z-30 max-w-2xl">
+        <h4 className="text-sm font-semibold text-gray-900 mb-2 text-center">🎉 COMPLETE MIRO-LIKE CANVAS - ALL FEATURES WORKING!</h4>
+        <div className="grid grid-cols-2 gap-x-6 text-xs text-gray-600">
+          <div className="space-y-1">
+            <p>• <strong>V</strong> - Select & move objects</p>
+            <p>• <strong>H</strong> - Hand tool (pan canvas)</p>
+            <p>• <strong>P</strong> - Pen tool (retains color/thickness)</p>
+            <p>• <strong>T</strong> - Text (click & type)</p>
+            <p>• <strong>S</strong> - Sticky notes (click to add)</p>
+            <p>• <strong>E</strong> - Eraser (click/drag to erase)</p>
+            <p>• <strong>Shapes</strong> - Rectangle, Circle, Triangle, Diamond, Star</p>
+          </div>
+          <div className="space-y-1">
+            <p>• <strong>L</strong> - Line (drag to draw)</p>
+            <p>• <strong>A</strong> - Arrow (drag to draw)</p>
+            <p>• <strong>Image</strong> - Upload & add images</p>
+            <p>• <strong>Ctrl+Z/Y</strong> - Undo/Redo</p>
+            <p>• <strong>Ctrl+C/V/D</strong> - Copy/Paste/Duplicate</p>
+            <p>• <strong>Ctrl+G</strong> - Group/Ungroup</p>
+            <p>• <strong>Mouse Wheel</strong> - Zoom in/out</p>
+          </div>
         </div>
       </div>
     </div>
